@@ -317,8 +317,11 @@ function paint(snap) {
     islandScore.textContent = `${Math.floor(snap.fees)} tokens`;
   }
   if (snap.state === 'timeout') {
-    timeupName.textContent = `${snap.islandName} ran out of time.`;
-    timeupScore.textContent = `${Math.floor(snap.fees)} tokens kept`;
+    timeupName.textContent = `Time's up on ${snap.islandName}.`;
+    const lost = Math.floor(snap.lostTokens || 0);
+    timeupScore.textContent = lost > 0
+      ? `${lost} tokens from this island are gone. ${Math.floor(snap.fees)} remain.`
+      : `${Math.floor(snap.fees)} tokens remain.`;
   }
 
   const live = new Set();

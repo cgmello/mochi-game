@@ -40,28 +40,34 @@ function paintGrass() {
 function paintStone() {
   const c = canvas(256, 256);
   const g = c.getContext('2d');
-  const tiles = ['#e7d3b0', '#d7b48a', '#c98b62', '#8aa4c4', '#efe2c8', '#b7a08a'];
-  const n = 8;
+  g.fillStyle = '#8d97a6';
+  g.fillRect(0, 0, 256, 256);
+  const n = 4;
   const s = 256 / n;
   for (let y = 0; y < n; y++) {
     for (let x = 0; x < n; x++) {
-      g.fillStyle = tiles[(x * 3 + y * 5) % tiles.length];
-      g.fillRect(x * s + 1, y * s + 1, s - 2, s - 2);
-      g.fillStyle = 'rgba(255,255,255,0.18)';
-      g.fillRect(x * s + 3, y * s + 3, s * 0.35, 3);
+      const light = (x + y) % 2 === 0;
+      g.fillStyle = light ? '#e7edf4' : '#c5ced8';
+      g.fillRect(x * s + 3, y * s + 3, s - 6, s - 6);
+      g.fillStyle = '#5e6874';
+      const holes = light ? 4 : 3;
+      for (let i = 0; i < holes; i++) {
+        for (let j = 0; j < holes; j++) {
+          g.beginPath();
+          g.arc(x * s + 16 + i * 12, y * s + 16 + j * 12, 2.1, 0, Math.PI * 2);
+          g.fill();
+        }
+      }
+      if ((x * 2 + y) % 3 === 0) {
+        g.strokeStyle = '#3ce7ff';
+        g.globalAlpha = 0.9;
+        g.lineWidth = 3;
+        g.strokeRect(x * s + 10, y * s + 10, s - 20, s - 20);
+        g.globalAlpha = 1;
+      }
     }
   }
-  g.strokeStyle = '#6d5844';
-  g.lineWidth = 2;
-  for (let i = 0; i <= n; i++) {
-    g.beginPath();
-    g.moveTo(i * s, 0);
-    g.lineTo(i * s, 256);
-    g.moveTo(0, i * s);
-    g.lineTo(256, i * s);
-    g.stroke();
-  }
-  return texOf(c, 6, 6);
+  return texOf(c, 5, 5);
 }
 
 function paintFacade() {

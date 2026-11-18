@@ -19,7 +19,7 @@ html, body {
   user-select: none;
 }
 
-canvas, #vignette, #flash, #hud, #banner, #hint, #pops, #title, #phase, #island, .touch, #fail {
+canvas, #vignette, #flash, #hud, #banner, #hint, #pops, #title, #phase, #island, #timeup, .touch, #fail {
   position: fixed;
   inset: 0;
 }
@@ -350,6 +350,14 @@ kbd {
   background: rgba(8, 16, 36, 0.62);
   padding: 20px;
 }
+#timeup { background: rgba(4, 2, 12, 0.86); }
+.the-end {
+  font-size: clamp(64px, 12vw, 112px);
+  letter-spacing: 0.06em;
+  line-height: 0.9;
+  margin: 0 0 12px;
+}
+.the-end-card { text-align: center; }
 #phase[hidden], #island[hidden], #timeup[hidden] { display: none; }
 #timer.low { color: #ff5d7a; }
 

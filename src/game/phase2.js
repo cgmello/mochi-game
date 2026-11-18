@@ -2,11 +2,13 @@ import * as THREE from 'three';
 import { updateMochi } from './actors.js';
 import { GRAVITY } from './constants.js';
 import { makePhaseTextures, matte } from './phase2tex.js';
+import { addSetPieces } from './phase2set.js';
 
 const GOAL = 20;
 const ISLAND_R = 46;
-const RUN = 8.2;
-const AIR = 0.46;
+const RUN = 12.4;
+const AIR = 0.31;
+const BOOST = 1.7;
 const TURN = 2.05;
 const JUMP_V = 10.4;
 const BODY_R = 0.34;
@@ -18,10 +20,11 @@ const THEMES = [
 ];
 
 const FIGHT_SPOTS = [
-  [1.2, 12], [-1.6, 20], [2.2, 28], [-2.4, -2], [3, -12], [-3.2, -18],
-  [12, -8], [-13, -4], [15, 16], [-15, 18], [18, -16], [-18, 8],
-  [9, 30], [-9, 26], [22, -6], [-22, -14], [7, -24], [-16, -20],
-  [14, 22, 1.25], [-10, 14, 1.25],
+  [6, -14], [6, -7], [6, 0], [6, 7], [6, 14], [6, 21], [6, 28],
+  [0, 30],
+  [-6, 28], [-6, 21], [-6, 14], [-6, 7], [-6, 0], [-6, -7], [-6, -14],
+  [0, -16],
+  [0, 8], [0, 18], [12, 8], [-13, 10],
 ];
 
 const TRICK = [
@@ -47,6 +50,9 @@ export function createRoam(game) {
 
   const roam = {
     fees: 0,
+    islandEarned: 0,
+    lostTokens: 0,
+    boostT: 0,
     resolved: 0,
     goal: GOAL,
     islandIndex: 0,
@@ -146,10 +152,13 @@ export function createRoam(game) {
         this.timeLeft -= dt;
         if (this.timeLeft <= 0) {
           this.timeLeft = 0;
+          this.lostTokens = this.islandEarned;
+          this.fees = Math.max(0, this.fees - this.islandEarned);
+          this.islandEarned = 0;
           game.state = 'timeout';
           game.audio.crack();
-          game.bannerText = "Time's up";
-          game.bannerT = 1.4;
+          game.bannerText = '';
+          game.bannerT = 0;
         } else this._updateMove(dt);
       } else this._placeMochi();
       this._updateFights(dt);
@@ -169,6 +178,9 @@ export function createRoam(game) {
       this.islandName = theme.name;
       this.timeLeft = theme.time;
       this.resolved = 0;
+      this.islandEarned = 0;
+      this.lostTokens = 0;
+      this.boostT = 0;
       this.goal = GOAL;
       game.scene.fog.color.setHex(0x2a4ea6);
       game.scene.fog.near = 120;
@@ -182,7 +194,7 @@ export function createRoam(game) {
       this.kz = 0;
       this.stun = 0;
       this.invuln = 1.1;
-      this.spawn = { x: 0, y: 0, z: -8 };
+      this.spawn = { x: 0, y: 0, z: -6 };
       this.trickNext = 0;
       this.trickArmed = false;
       this.flipping = false;
@@ -252,11 +264,13 @@ export function createRoam(game) {
     _updateMove(dt) {
       this.invuln = Math.max(0, this.invuln - dt);
       this.stun = Math.max(0, this.stun - dt);
+      this.boostT = Math.max(0, this.boostT - dt);
       if (this.stun <= 0) {
         if (this.holds.left) this.yaw += TURN * dt;
         if (this.holds.right) this.yaw -= TURN * dt;
       }
-      const move = this.stun > 0 ? 0 : this.holds.forward ? RUN : 0;
+      const pace = this.boostT > 0 ? RUN * BOOST : RUN;
+      const move = this.stun > 0 ? 0 : this.holds.forward ? pace : 0;
       const airborne = this.y > this.support + 0.12;
       const speed = airborne ? move * AIR : move;
       const fx = Math.sin(this.yaw);
@@ -306,10 +320,9 @@ export function createRoam(game) {
       this._placeMochi();
       const lean = (this.holds.left ? 7 : 0) + (this.holds.right ? -7 : 0);
       updateMochi(game.mochi, game.time, Math.abs(speed), grounded && !this.flipping, 0, lean, dt, false);
-      if (this.invuln <= 0) {
-        this._touchFights();
-        this._touchHazards(dt, grounded);
-      }
+      this._touchFights();
+      this._touchBoosts(grounded);
+      if (this.invuln <= 0) this._touchHazards(dt, grounded);
       this._touchChecks();
     },
 
@@ -355,7 +368,7 @@ export function createRoam(game) {
         if (fight.resolved) continue;
         const dx = this.x - fight.x;
         const dz = this.z - fight.z;
-        if (dx * dx + dz * dz > 1.7 * 1.7) continue;
+        if (dx * dx + dz * dz > 2.05 * 2.05) continue;
         if (Math.abs(this.y - fight.y) > 1.15) continue;
         this._resolve(fight);
         return;
@@ -434,6 +447,19 @@ export function createRoam(game) {
       }
     },
 
+    _touchBoosts(grounded) {
+      if (!grounded || !world.boosts) return;
+      for (const pad of world.boosts) {
+        if (!inside(this.x, this.z, pad, 0.1)) continue;
+        if (this.boostT <= 0.05) {
+          game._popup(new THREE.Vector3(this.x, this.y + 1.6, this.z), 'Boost', 1000);
+          game.audio.boost();
+        }
+        this.boostT = 3;
+        return;
+      }
+    },
+
     _trip(nx, nz) {
       this.kx = nx * 6.5;
       this.kz = nz * 6.5;
@@ -481,11 +507,11 @@ export function createRoam(game) {
 
     _updateFights(dt) {
       for (const fight of this.fights) {
-        writeBolt(fight.bolt, fight.a.position, fight.b.position, game.time + fight.x, 0.95);
+        writeArc(fight.bolt, fight.a.position, fight.b.position, game.time + fight.x);
         fight.bolt.visible = fight.angry;
         fight.sparks.forEach((spark, i) => {
           spark.visible = fight.angry;
-          const s = fight.angry ? 0.35 + Math.abs(Math.sin(game.time * 18 + i * 1.7)) * 0.85 : 0.01;
+          const s = fight.angry ? 0.12 + Math.abs(Math.sin(game.time * 18 + i * 1.7)) * 0.16 : 0.01;
           spark.scale.setScalar(s);
           spark.rotation.y += dt * 6;
           spark.rotation.z += dt * 3;
@@ -536,6 +562,7 @@ export function createRoam(game) {
         if (coin.t < 1) return true;
         world.group.remove(coin.mesh);
         this.fees += 1;
+        this.islandEarned += 1;
         this.resolved += 1;
         game._popup(home.clone(), '+1', 1000);
         game.audio.coin(5000);
@@ -562,7 +589,23 @@ export function createRoam(game) {
       }
       for (const link of world.pink) {
         writeBolt(link.mesh, link.a, link.b, game.time * 1.4, 0);
-        link.mesh.material.color.setHex(0xff5ad8);
+      }
+      if (world.whale) {
+        world.whale.position.x = Math.sin(game.time * 0.22) * 10;
+        world.whale.position.y = 10.2 + Math.sin(game.time * 0.4) * 0.45;
+        world.whale.rotation.y = 0.15 + Math.sin(game.time * 0.22) * 0.2;
+      }
+      if (world.orbits) {
+        for (const orbit of world.orbits) orbit.rotation.y += dt * orbit.userData.spin;
+      }
+      if (world.portal) world.portal.rotation.z = Math.sin(game.time * 0.6) * 0.04;
+      if (world.boosts) {
+        for (const pad of world.boosts) {
+          for (const arrow of pad.arrows) {
+            arrow.position.z += dt * 3.2;
+            if (arrow.position.z > pad.len / 2 - 0.4) arrow.position.z -= pad.len - 0.8;
+          }
+        }
       }
     },
 
@@ -603,9 +646,9 @@ function buildIsland(lib, tex, index) {
   const group = new THREE.Group();
   const solids = [];
   const pits = [
-    { x: 14, z: 22, hw: 3.4, hd: 2.6 },
-    { x: -10, z: 14, hw: 3.2, hd: 2.4 },
-    { x: -15, z: -8, hw: 2.4, hd: 2.2 },
+    { x: 14, z: 22, hw: 2.35, hd: 1.7 },
+    { x: -10, z: 14, hw: 2.2, hd: 1.65 },
+    { x: -16, z: -12, hw: 1.35, hd: 1.15 },
   ];
   const grass = new THREE.Mesh(
     new THREE.CylinderGeometry(ISLAND_R, ISLAND_R * 0.9, 2.1, 40),
@@ -652,7 +695,7 @@ function buildIsland(lib, tex, index) {
       post2.position.z = -9.4;
       group.add(dock, post, post2);
       solids.push({ x: side * 38, z: -8, hw: 6, hd: 1.7, top: 0.44 });
-      pits.push({ x: side * 44, z: -8, hw: 6, hd: 4 });
+      pits.push({ x: side * 44, z: -8, hw: 5, hd: 2.4, water: true });
     }
   }
 
@@ -664,24 +707,23 @@ function buildIsland(lib, tex, index) {
   const zaps = addZaps(group, tex);
   const unstables = addUnstable(group, solids, tex);
   const bugs = addBugs(group);
-  const pink = addCubes(group, tex);
+  const decor = addSetPieces(group, theme);
+  const boosts = addBoosts(group);
   addTrick(group, solids, tex);
   addPlatform(group, solids, tex, 14, 22, 1.25);
   addPlatform(group, solids, tex, -10, 14, 1.25);
+  addBridge(group, solids, tex, 11.5, 22, 3.4);
+  addBridge(group, solids, tex, -12.6, 14, 3.2);
   if (theme.kind === 'market') addMarket(group, tex, theme);
   if (theme.kind === 'harbor') addBeacons(group, tex, theme);
   if (theme.kind === 'rally') addRally(group, solids, tex, theme);
 
-  for (const pit of pits) {
-    const hole = new THREE.Mesh(
-      new THREE.BoxGeometry(pit.hw * 2, 0.08, pit.hd * 2),
-      new THREE.MeshBasicMaterial({ color: 0x120818 }),
-    );
-    hole.position.set(pit.x, -0.02, pit.z);
-    group.add(hole);
-  }
+  for (const pit of pits) dressPit(group, pit);
 
-  return { group, solids, pits, cables, zaps, unstables, bugs, checks, leds, pink };
+  return {
+    group, solids, pits, cables, zaps, unstables, bugs, checks, leds, boosts,
+    pink: decor.bolts, whale: decor.whale, orbits: decor.orbits, portal: decor.portal,
+  };
 }
 
 function road(group, mat, x, z, w, d) {
@@ -750,9 +792,10 @@ function addProps(group, solids, tex, theme, index) {
   let li = 0;
   for (let n = 0; n < 28; n++) {
     const side = n % 2 ? 1 : -1;
-    const x = side * (6.5 + rand() * 16);
+    const x = side * (9 + rand() * 14);
     const z = -24 + rand() * 56;
     if (Math.abs(x) < 5 && Math.abs(z - 4) < 30) continue;
+    if (FIGHT_SPOTS.some(([fx, fz]) => Math.hypot(x - fx, z - fz) < 2.6)) continue;
     dummy.makeTranslation(x, 0.68, z);
     rack.setMatrixAt(ri++, dummy);
     if (li < 56) {
@@ -786,7 +829,7 @@ function addProps(group, solids, tex, theme, index) {
 }
 
 function addChecks(group, tex) {
-  const spots = [[0, -8], [0, 8], [0, 20], [0, 32]];
+  const spots = [[0, -6], [0, -16], [0, 4], [0, 14], [0, 24], [0, 32], [8, 20], [-8, 12]];
   return spots.map(([x, z], i) => {
     const g = new THREE.Group();
     const block = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 0.9), matte(tex.metal));
@@ -806,9 +849,9 @@ function addChecks(group, tex) {
 function addCables(group) {
   const mat = new THREE.MeshStandardMaterial({ color: 0xee8521, roughness: 0.45, emissive: 0x7a3208, emissiveIntensity: 0.4 });
   const spots = [
-    { x: 0, z: -14, rot: Math.PI / 2, hw: 3.2 },
-    { x: 5.5, z: 12, rot: 0.4, hw: 2.4 },
-    { x: -6, z: 24, rot: Math.PI / 2, hw: 2.8 },
+    { x: 10, z: 22, rot: 0.3, hw: 1.6 },
+    { x: -12, z: 14, rot: 0.6, hw: 1.5 },
+    { x: -16, z: -10, rot: 0.2, hw: 1.4 },
   ];
   return spots.map((cable) => {
     const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, cable.hw * 2, 6), mat);
@@ -821,7 +864,7 @@ function addCables(group) {
 }
 
 function addZaps(group, tex) {
-  const spots = [[8, 16], [-7, -6], [2, 24]];
+  const spots = [[10, 18], [-12, 6], [9, -14]];
   return spots.map(([x, z]) => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.9), matte(tex.facade));
     mesh.position.set(x, 0.55, z);
@@ -833,7 +876,7 @@ function addZaps(group, tex) {
 }
 
 function addUnstable(group, solids, tex) {
-  return [[6.5, 11], [-15, -8]].map(([x, z]) => {
+  return [[8.5, -16], [-16, -12]].map(([x, z]) => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.9, 1), matte(tex.rack));
     mesh.position.set(x, 0.45, z);
     group.add(mesh);
@@ -879,33 +922,88 @@ function addBugs(group) {
   });
 }
 
-function addCubes(group, tex) {
-  const mat = matte(tex.facade, 0xffffff, 0.4);
-  const pairs = [
-    [[-16, 4.2, 6], [-14.1, 5.1, 7.6]],
-    [[18, 3.8, 14], [16.3, 4.8, 15.5]],
-    [[-8, 6.2, 24], [-6.2, 5.3, 25.6]],
-    [[22, 4.4, -12], [20.2, 5.2, -10.4]],
+function addBridge(group, solids, tex, x, z, len) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(len, 0.16, 1.2), matte(tex.metal));
+  mesh.position.set(x, 0.18, z);
+  group.add(mesh);
+  solids.push({ x, z, hw: len / 2, hd: 0.6, top: 0.26 });
+}
+
+function addBoosts(group) {
+  const spots = [
+    { x: 6, z: 4, len: 8, rot: 0 },
+    { x: 6, z: 20, len: 8, rot: 0 },
+    { x: -6, z: 20, len: 8, rot: Math.PI },
+    { x: -6, z: 4, len: 8, rot: Math.PI },
   ];
-  const pink = [];
-  for (const pair of pairs) {
-    const cubes = pair.map(([x, y, z], i) => {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.85 + i * 0.25, 0.85, 0.85), mat);
-      const edge = new THREE.LineSegments(
-        new THREE.EdgesGeometry(mesh.geometry),
-        new THREE.LineBasicMaterial({ color: 0xff6ec8 }),
-      );
-      mesh.add(edge);
-      mesh.position.set(x, y, z);
-      group.add(mesh);
-      return mesh;
-    });
-    const bolt = makeBolt();
-    bolt.material.color.setHex(0xff5ad8);
-    group.add(bolt);
-    pink.push({ mesh: bolt, a: cubes[0].position, b: cubes[1].position });
+  const padMat = new THREE.MeshStandardMaterial({ color: 0x1c2838, roughness: 0.45, metalness: 0.35, emissive: 0x083040, emissiveIntensity: 0.4 });
+  const arrowMat = new THREE.MeshBasicMaterial({ color: 0x3ce7ff, side: THREE.DoubleSide });
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0.42);
+  shape.lineTo(-0.32, -0.22);
+  shape.lineTo(0.32, -0.22);
+  const arrowGeo = new THREE.ShapeGeometry(shape);
+  return spots.map((spot) => {
+    const pad = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.08, spot.len), padMat);
+    pad.position.set(spot.x, 0.12, spot.z);
+    pad.rotation.y = spot.rot || 0;
+    const arrows = [];
+    const count = Math.max(3, Math.floor(spot.len / 1.5));
+    for (let i = 0; i < count; i++) {
+      const arrow = new THREE.Mesh(arrowGeo, arrowMat);
+      arrow.rotation.x = -Math.PI / 2;
+      arrow.position.set(0, 0.08, -spot.len / 2 + 0.8 + i * (spot.len / count));
+      pad.add(arrow);
+      arrows.push(arrow);
+    }
+    group.add(pad);
+    return { x: spot.x, z: spot.z, hw: 1.15, hd: spot.len / 2, len: spot.len, arrows };
+  });
+}
+
+function dressPit(group, pit) {
+  const w = pit.hw * 2;
+  const d = pit.hd * 2;
+  if (!pit.water) {
+    const shaft = new THREE.Mesh(
+      new THREE.BoxGeometry(w * 0.86, 6, d * 0.86),
+      new THREE.MeshBasicMaterial({ color: 0x070212 }),
+    );
+    shaft.position.set(pit.x, -3.05, pit.z);
+    const mouth = new THREE.Mesh(
+      new THREE.PlaneGeometry(w * 0.9, d * 0.9),
+      new THREE.MeshBasicMaterial({ color: 0x070212 }),
+    );
+    mouth.rotation.x = -Math.PI / 2;
+    mouth.position.set(pit.x, 0.05, pit.z);
+    const grate = new THREE.Mesh(
+      new THREE.PlaneGeometry(w * 0.5, d * 0.5),
+      new THREE.MeshBasicMaterial({ color: 0x5a2088 }),
+    );
+    grate.rotation.x = -Math.PI / 2;
+    grate.position.set(pit.x, 0.06, pit.z);
+    group.add(shaft, mouth, grate);
   }
-  return pink;
+  const stripe = new THREE.MeshBasicMaterial({ color: pit.water ? 0x3ce7ff : 0xff2d6a });
+  const rims = [
+    [0, pit.hd, w + 0.2, 0.16],
+    [0, -pit.hd, w + 0.2, 0.16],
+    [pit.hw, 0, 0.16, d + 0.2],
+    [-pit.hw, 0, 0.16, d + 0.2],
+  ];
+  for (const [ox, oz, rw, rd] of rims) {
+    const rim = new THREE.Mesh(new THREE.BoxGeometry(rw, 0.07, rd), stripe);
+    rim.position.set(pit.x + ox, 0.1, pit.z + oz);
+    group.add(rim);
+  }
+  const chev = new THREE.MeshBasicMaterial({ color: 0xffe14a, side: THREE.DoubleSide });
+  for (let i = -1; i <= 1; i++) {
+    const mark = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.28), chev);
+    mark.rotation.x = -Math.PI / 2;
+    mark.rotation.z = Math.PI / 4;
+    mark.position.set(pit.x + i * 0.55, 0.14, pit.z - pit.hd - 0.38);
+    group.add(mark);
+  }
 }
 
 function addTrick(group, solids, tex) {
@@ -956,10 +1054,10 @@ function addBeacons(group, tex, theme) {
 }
 
 function addRally(group, solids, tex) {
-  const stage = new THREE.Mesh(new THREE.BoxGeometry(11, 0.6, 5.2), matte(tex.stone));
-  stage.position.set(0, 0.4, 24);
+  const stage = new THREE.Mesh(new THREE.BoxGeometry(8, 0.6, 4.2), matte(tex.stone));
+  stage.position.set(14, 0.4, 26);
   group.add(stage);
-  solids.push({ x: 0, z: 24, hw: 5.5, hd: 2.6, top: 0.7 });
+  solids.push({ x: 14, z: 26, hw: 4, hd: 2.1, top: 0.7 });
   const c = document.createElement('canvas');
   c.width = 512;
   c.height = 128;
@@ -977,12 +1075,12 @@ function addRally(group, solids, tex) {
     new THREE.PlaneGeometry(8, 1.8),
     new THREE.MeshBasicMaterial({ map, side: THREE.DoubleSide }),
   );
-  banner.position.set(0, 2.6, 26.4);
+  banner.position.set(14, 2.6, 28.2);
   banner.rotation.y = Math.PI;
   const poleL = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3.2, 6), matte(tex.metal));
   const poleR = poleL.clone();
-  poleL.position.set(-4.2, 1.6, 26.4);
-  poleR.position.set(4.2, 1.6, 26.4);
+  poleL.position.set(10.2, 1.6, 28.2);
+  poleR.position.set(17.8, 1.6, 28.2);
   group.add(banner, poleL, poleR);
 }
 
@@ -998,18 +1096,9 @@ function makeFight(x, y, z) {
   poseArms(a, true);
   poseArms(b, false);
   group.add(a, b);
-  const bolt = makeBolt();
+  const bolt = makeArc();
   group.add(bolt);
-  const sparks = [];
-  const sparkMat = new THREE.MeshBasicMaterial({ color: 0xfff1c4 });
-  for (let i = 0; i < 7; i++) {
-    const spark = new THREE.Mesh(GEO.spark, i % 2 ? sparkMat : new THREE.MeshBasicMaterial({ color: 0xff5a2a }));
-    const ang = (i / 7) * Math.PI * 2;
-    spark.position.set(Math.cos(ang) * 0.16, 1.02 + (i % 3) * 0.06, Math.sin(ang) * 0.16);
-    group.add(spark);
-    sparks.push(spark);
-  }
-  return { group, a, b, bolt, sparks, x, z, y, angry: true, resolved: false, leaving: false, leaveT: 0 };
+  return { group, a, b, bolt, sparks: [], x, z, y, angry: true, resolved: false, leaving: false, leaveT: 0 };
 }
 
 function makeAgent() {
@@ -1097,6 +1186,26 @@ function makeBolt() {
   }));
   mesh.frustumCulled = false;
   return mesh;
+}
+
+function makeArc() {
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(7 * 3), 3));
+  const mesh = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xff2438, toneMapped: false }));
+  mesh.frustumCulled = false;
+  return mesh;
+}
+
+function writeArc(mesh, a, b, time) {
+  const pos = mesh.geometry.attributes.position;
+  const dx = b.x - a.x;
+  const dz = b.z - a.z;
+  for (let i = 0; i < 7; i++) {
+    const t = 0.28 + (i / 6) * 0.44;
+    const jag = i === 0 || i === 6 ? 0 : (i % 2 ? 0.09 : -0.08) * Math.sin(time * 14 + i);
+    pos.setXYZ(i, a.x + dx * t, 1.02 + jag, a.z + dz * t);
+  }
+  pos.needsUpdate = true;
 }
 
 function writeBolt(mesh, a, b, time, lift) {

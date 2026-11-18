@@ -50,9 +50,9 @@ W, A, S, D e espaço repetem pulo e troca de faixa.
 | Seta esquerda / direita | Virar |
 | Espaço | Pular, inclusive de servidor em servidor |
 
-W, A e D repetem correr e virar. O minimapa mostra a Mochi e as brigas. Cada briga resolvida vale **1 token**. São **20 brigas** por ilha: a primeira, **Mercado de Contratos**, dura 60 segundos; **Porto dos Oráculos**, 45; **Praça do Rally**, 30. O tempo acaba numa tela de falha, com retry. Completar a ilha abre a seguinte.
+W, A e D repetem correr e virar. O minimapa mostra a Mochi e as brigas. Cada briga resolvida vale **1 token**. São **20 brigas** por ilha: **Mercado de Contratos** (60 s, cubos de circuito e cápsulas), **Porto dos Oráculos** (45 s, baleia, satélites e telescópios) e **Praça do Rally** (30 s, portal, mão robótica e horizonte de cidade). O chão das ruas é um piso elevado de sala de servidores. Faixas com setas dão cerca de 3 segundos de impulso.
 
-Cabos derrubam a Mochi, cubos de circuito dão choque, servidores instáveis desabam e insetos empurram ela para fora das plataformas. Cair custa 1 token e ela volta ao último **checkpoint**, um bloco que acende quando ela passa. Uma fileira de servidores, pulada em sequência até o último, faz a Mochi dar cambalhotas no ar.
+Se o tempo acaba, a tela **THE END** aparece, os tokens ganhos naquela ilha se perdem e a ilha recomeça. Buracos têm borda de alerta e um vão estreito ou uma ponte. Cair custa 1 token e a Mochi volta ao último **checkpoint**. Uma fileira de servidores, pulada em sequência até o último, faz a Mochi dar cambalhotas no ar.
 
 ## Regras
 

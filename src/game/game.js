@@ -430,6 +430,7 @@ export class Game {
       timeLeft: this.phase === 2 ? this.roam.timeLeft : 0,
       islandName: this.phase === 2 ? this.roam.islandName : '',
       islandIndex: this.phase === 2 ? this.roam.islandIndex : 0,
+      lostTokens: this.phase === 2 ? this.roam.lostTokens : 0,
       map: this.phase === 2 ? this.roam.mapSnapshot() : null,
       hint: this.hint,
       banner: this.bannerT > 0 ? this.bannerText : '',

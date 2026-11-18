@@ -7,12 +7,11 @@ import { buildCourse, stepSpider } from './phase2world.js';
 import {
   GOAL,
   ISLANDS,
-  MAP,
   RUN_SECONDS,
-  bridgeSolids,
   BACK,
   fightSpots,
   freeSpot,
+  mapView,
   onIsland,
   roamPace,
   whichIsland,
@@ -170,17 +169,20 @@ export function createRoam(game) {
     },
 
     mapSnapshot() {
+      const view = mapView(this.x, this.z);
+      const near = (x, z, extra = 16) => Math.hypot(x - view.island.x, z - view.island.z) <= view.island.r + extra;
       return {
         x: this.x,
         z: this.z,
         yaw: this.yaw,
-        originX: MAP.originX,
-        originZ: MAP.originZ,
-        span: MAP.span,
-        islands: ISLANDS.map((isle) => ({ x: isle.cx, z: isle.cz, r: isle.r, color: isle.map })),
-        bridges: bridgeSolids().map((bridge) => ({ x: bridge.x, z: bridge.z, hw: bridge.hw, hd: bridge.hd })),
-        fights: this.fights.filter((f) => !f.resolved).map((f) => ({ x: f.x, z: f.z })),
-        bonuses: (world?.bonuses || []).filter((coin) => !coin.taken).map((coin) => ({ x: coin.x, z: coin.z })),
+        focus: view.island,
+        span: view.span,
+        onBridge: view.onBridge,
+        bridge: view.bridge,
+        exits: view.exits,
+        fights: this.fights.filter((f) => !f.resolved && near(f.x, f.z)).map((f) => ({ x: f.x, z: f.z })),
+        bonuses: (world?.bonuses || []).filter((coin) => !coin.taken && near(coin.x, coin.z)).map((coin) => ({ x: coin.x, z: coin.z })),
+        checks: (world?.checks || []).filter((check) => near(check.x, check.z, 20)).map((check) => ({ x: check.x, z: check.z, active: check.active })),
       };
     },
 

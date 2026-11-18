@@ -132,6 +132,54 @@ export function mapMarkerAngle(yaw) {
   return yaw;
 }
 
+export function mapView(x, z) {
+  const bridges = bridgeSolids();
+  const standing = ISLANDS.find((isle) => Math.hypot(x - isle.cx, z - isle.cz) <= isle.r);
+  let onBridge = false;
+  let bridge = null;
+  let island = standing;
+  if (!island) {
+    let best = null;
+    let bestD = Infinity;
+    for (const deck of bridges) {
+      const dx = Math.max(Math.abs(x - deck.x) - deck.hw, 0);
+      const dz = Math.max(Math.abs(z - deck.z) - deck.hd, 0);
+      const d = Math.hypot(dx, dz);
+      if (d < bestD) {
+        bestD = d;
+        best = deck;
+      }
+    }
+    if (best && bestD < 14) {
+      onBridge = true;
+      bridge = best;
+      const from = ISLANDS.find((isle) => isle.id === best.from);
+      const to = ISLANDS.find((isle) => isle.id === best.to);
+      const fromD = Math.hypot(x - from.cx, z - from.cz);
+      const toD = Math.hypot(x - to.cx, z - to.cz);
+      island = fromD < toD ? from : toD < fromD ? to : (x >= best.x ? to : from);
+    } else {
+      island = ISLANDS.slice().sort((a, b) => Math.hypot(x - a.cx, z - a.cz) - Math.hypot(x - b.cx, z - b.cz))[0];
+    }
+  }
+  const exits = bridges
+    .filter((deck) => deck.from === island.id || deck.to === island.id)
+    .map((deck) => {
+      const east = deck.from === island.id;
+      return { x: island.cx + (east ? island.r : -island.r), z: island.cz, east };
+    });
+  const margin = island.r * 1.08;
+  const reach = Math.hypot(x - island.cx, z - island.cz);
+  const span = onBridge ? Math.max(margin, reach * 1.12) : margin;
+  return {
+    island: { x: island.cx, z: island.cz, r: island.r, color: island.map, name: island.name, index: island.index },
+    span,
+    onBridge,
+    bridge: onBridge ? { x: bridge.x, z: bridge.z, hw: bridge.hw, hd: bridge.hd } : null,
+    exits,
+  };
+}
+
 export function mapForward(yaw) {
   return { x: Math.sin(yaw), y: -Math.cos(yaw) };
 }

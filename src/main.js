@@ -221,16 +221,23 @@ for (const button of document.querySelectorAll('[data-act]')) {
 
 window.addEventListener('resize', () => game.resize());
 
+function shade(hex, k) {
+  const n = parseInt(String(hex).replace('#', ''), 16);
+  const ch = (v) => Math.max(0, Math.min(255, Math.round(v * k)));
+  return `rgb(${ch((n >> 16) & 255)},${ch((n >> 8) & 255)},${ch(n & 255)})`;
+}
+
 function drawMap(map) {
-  if (!map) return;
+  if (!map || !map.focus) return;
   const ctx = mapCtx;
   const w = mapCanvas.width;
   const h = mapCanvas.height;
   const cx = w / 2;
   const cy = h / 2;
-  const scale = (w * 0.46) / (map.span || map.r || 46);
-  const ox = cx - (map.originX || 0) * scale;
-  const oy = cy + (map.originZ || 0) * scale;
+  const focus = map.focus;
+  const scale = (w * 0.46) / (map.span || focus.r || 46);
+  const ox = cx - focus.x * scale;
+  const oy = cy + focus.z * scale;
   const px = (x) => ox + x * scale;
   const py = (z) => oy - z * scale;
   ctx.clearRect(0, 0, w, h);
@@ -240,38 +247,51 @@ function drawMap(map) {
   ctx.clip();
   ctx.fillStyle = '#10243f';
   ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = '#8d6a3a';
-  for (const bridge of map.bridges || []) {
+  if (map.bridge) {
+    const bridge = map.bridge;
+    ctx.fillStyle = '#c4924a';
     ctx.fillRect(px(bridge.x - bridge.hw), py(bridge.z + bridge.hd), bridge.hw * 2 * scale, bridge.hd * 2 * scale);
   }
-  for (const isle of map.islands || [{ x: 0, z: 0, r: map.r, color: '#3aaa62' }]) {
-    ctx.fillStyle = isle.color || '#3aaa62';
+  ctx.fillStyle = shade(focus.color, 0.72);
+  ctx.beginPath();
+  ctx.arc(px(focus.x), py(focus.z), focus.r * scale, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = focus.color;
+  ctx.stroke();
+  ctx.fillStyle = '#e7c27a';
+  for (const exit of map.exits || []) {
+    ctx.fillRect(px(exit.x) + (exit.east ? 0 : -11), py(exit.z) - 5, 11, 10);
+  }
+  ctx.lineWidth = 2;
+  for (const check of map.checks || []) {
+    ctx.strokeStyle = check.active ? '#7af6ff' : '#8eb4c8';
     ctx.beginPath();
-    ctx.arc(px(isle.x), py(isle.z), isle.r * scale, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.arc(px(check.x), py(check.z), check.active ? 5 : 3.4, 0, Math.PI * 2);
+    ctx.stroke();
   }
   ctx.fillStyle = '#ffd15a';
   for (const coin of map.bonuses || []) {
     ctx.save();
     ctx.translate(px(coin.x), py(coin.z));
     ctx.rotate(Math.PI / 4);
-    ctx.fillRect(-3.2, -3.2, 6.4, 6.4);
+    ctx.fillRect(-4.2, -4.2, 8.4, 8.4);
     ctx.restore();
   }
   ctx.fillStyle = '#ff3358';
-  for (const fight of map.fights) {
+  for (const fight of map.fights || []) {
     ctx.beginPath();
-    ctx.arc(px(fight.x), py(fight.z), 3.2, 0, Math.PI * 2);
+    ctx.arc(px(fight.x), py(fight.z), 4.2, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.save();
   ctx.translate(px(map.x), py(map.z));
   ctx.rotate(mapMarkerAngle(map.yaw || 0));
-  ctx.fillStyle = '#ffd15a';
+  ctx.fillStyle = '#fff4c8';
   ctx.beginPath();
-  ctx.moveTo(0, -8);
-  ctx.lineTo(5, 6);
-  ctx.lineTo(-5, 6);
+  ctx.moveTo(0, -9);
+  ctx.lineTo(5.5, 7);
+  ctx.lineTo(-5.5, 7);
   ctx.closePath();
   ctx.fill();
   ctx.restore();

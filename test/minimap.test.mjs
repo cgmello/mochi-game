@@ -11,6 +11,7 @@ import {
   roamPace,
   mapForward,
   mapMarkerAngle,
+  mapView,
   onIsland,
   overlapsSolid,
   whichIsland,
@@ -27,6 +28,37 @@ test('minimap marker points where Mochi is facing', () => {
   assert.ok(mapMarkerAngle(Math.PI / 2) > 0);
   const west = mapForward(-Math.PI / 2);
   assert.ok(west.x < -0.9);
+});
+
+test('minimap frames only the island under Mochi', () => {
+  const home = mapView(0, -20);
+  assert.equal(home.island.name, 'Contract Market');
+  assert.equal(home.onBridge, false);
+  assert.equal(home.bridge, null);
+  assert.ok(home.span < ISLANDS[0].r * 1.2);
+  assert.equal(home.exits.length, 1);
+  assert.ok(home.exits[0].east);
+  assert.ok(home.exits[0].x > ISLANDS[0].r - 1);
+
+  const port = mapView(ISLANDS[1].cx, 12);
+  assert.equal(port.island.name, 'Oracle Port');
+  assert.equal(port.exits.length, 2);
+
+  const rally = mapView(ISLANDS[2].cx, 4);
+  assert.equal(rally.island.name, 'Rally Square');
+  assert.equal(rally.exits.length, 1);
+  assert.equal(rally.exits[0].east, false);
+
+  const mid = (ISLANDS[0].cx + ISLANDS[1].cx) / 2;
+  const crossing = mapView(mid, 0);
+  assert.equal(crossing.onBridge, true);
+  assert.ok(crossing.bridge);
+  assert.ok(crossing.span > ISLANDS[0].r);
+  assert.equal(crossing.island.name, 'Oracle Port');
+
+  const leaving = mapView(ISLANDS[0].r + 4, 0);
+  assert.equal(leaving.onBridge, true);
+  assert.equal(leaving.island.name, 'Contract Market');
 });
 
 test('the course is 45 conflicts across three linked islands', () => {

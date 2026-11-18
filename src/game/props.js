@@ -524,7 +524,7 @@ export function buildAtmosphere(lib, camera) {
     const g = new THREE.Group();
     g.add(cube, edges);
     const side = i < 4 ? -1 : 1;
-    g.position.set(side * (10 + (i % 4) * 4.5), 8 + (i % 5) * 2.4, -36 - (i % 4) * 8);
+    g.position.set(side * (22 + (i % 4) * 8), 26 + (i % 5) * 3.4, -150 - (i % 4) * 18);
     g.userData.bob = { base: g.position.y, phase: i * 0.7, speed: 0.45 + (i % 3) * 0.12, amp: 0.35 };
     rig.add(g);
     decor.push(g);
@@ -546,11 +546,11 @@ export function buildAtmosphere(lib, camera) {
   }
 
   const islands = [
-    [-16, 5.4, -62, 2.7, 1],
-    [15, 4.6, -70, 2.2, 2],
-    [-2, 8.2, -98, 3.4, 3],
-    [24, 9.5, -88, 1.5, 4],
-    [-26, 8.8, -84, 1.6, 5],
+    [-48, 36, -220, 3.6, 1],
+    [54, 32, -240, 3.0, 2],
+    [-8, 46, -280, 4.6, 3],
+    [62, 40, -260, 2.4, 4],
+    [-70, 38, -250, 2.6, 5],
   ];
   for (const [x, y, z, s, seed] of islands) {
     const island = makeFloatingIsland(lib, seed);

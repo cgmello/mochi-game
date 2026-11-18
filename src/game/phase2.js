@@ -3,7 +3,7 @@ import { updateMochi } from './actors.js';
 import { GRAVITY } from './constants.js';
 import { makePhaseTextures, matte } from './phase2tex.js';
 import { addSetPieces } from './phase2set.js';
-import { buildCourse } from './phase2world.js';
+import { buildCourse, stepSpider } from './phase2world.js';
 import {
   GOAL,
   ISLANDS,
@@ -11,6 +11,7 @@ import {
   RUN_SECONDS,
   bridgeSolids,
   fightSpots,
+  freeSpot,
   onIsland,
   whichIsland,
 } from './phase2layout.js';
@@ -98,7 +99,7 @@ export function createRoam(game) {
     },
 
     hold(action, down) {
-      if (action === 'back') return;
+      if (action === 'back' || action === 'duck') return;
       if (action in this.holds) this.holds[action] = down;
     },
     release() {
@@ -213,9 +214,11 @@ export function createRoam(game) {
       this.lostTokens = 0;
       this.boostT = 0;
       this.goal = GOAL;
-      game.scene.fog.color.setHex(0x2a4ea6);
-      game.scene.fog.near = 180;
-      game.scene.fog.far = 520;
+      game.scene.fog.color.setHex(0x16306e);
+      game.scene.fog.near = 340;
+      game.scene.fog.far = 820;
+      game.camera.far = 900;
+      game.camera.updateProjectionMatrix();
       this.x = 0;
       this.z = -52;
       this.y = 0;
@@ -450,8 +453,13 @@ export function createRoam(game) {
       }
       for (const bug of world.bugs) {
         const ang = game.time * 0.7 + bug.phase;
-        bug.mesh.position.set(bug.cx + Math.cos(ang) * bug.r, bug.y, bug.cz + Math.sin(ang) * bug.r);
+        bug.mesh.position.set(
+          bug.cx + Math.cos(ang) * bug.r,
+          bug.y + Math.abs(Math.sin(game.time * 9 + bug.phase)) * 0.04,
+          bug.cz + Math.sin(ang) * bug.r,
+        );
         bug.mesh.rotation.y = -ang;
+        stepSpider(bug.mesh, game.time + bug.phase);
         const dx = this.x - bug.mesh.position.x;
         const dz = this.z - bug.mesh.position.z;
         if (dx * dx + dz * dz < 1.15 * 1.15 && Math.abs(this.y - bug.y) < 1.2) {
@@ -519,8 +527,9 @@ export function createRoam(game) {
 
     _knockout() {
       this.fees = Math.max(0, this.fees - 1);
-      this.x = this.spawn.x;
-      this.z = this.spawn.z;
+      const spot = freeSpot(this.spawn.x, this.spawn.z, world.solids, 0.5);
+      this.x = spot.x;
+      this.z = spot.z;
       this.y = this.spawn.y;
       this.vy = 0;
       this.kx = 0;
@@ -540,10 +549,8 @@ export function createRoam(game) {
 
     _updateFights(dt) {
       for (const fight of this.fights) {
-        writeHeadBolt(fight.bolt, fight.a.position, fight.b.position, game.time + fight.x, 1);
-        writeHeadBolt(fight.boltB, fight.a.position, fight.b.position, game.time + fight.x + 1.7, -1);
-        fight.bolt.visible = fight.angry;
-        fight.boltB.visible = fight.angry;
+        writeHeadBolt(fight.bolt, game.time + fight.x);
+        fight.bolt.visible = fight.angry && Math.sin(game.time * 18 + fight.x) > -0.88;
         if (fight.angry) {
           fight.a.rotation.y = Math.PI / 2 + Math.sin(game.time * 6) * 0.08;
           fight.b.rotation.y = -Math.PI / 2 - Math.sin(game.time * 6) * 0.08;
@@ -1126,9 +1133,8 @@ function makeFight(x, y, z) {
   poseArms(b, false);
   group.add(a, b);
   const bolt = makeBolt();
-  const boltB = makeBolt();
-  group.add(bolt, boltB);
-  return { group, a, b, bolt, boltB, sparks: [], x, z, y, angry: true, resolved: false, leaving: false, leaveT: 0 };
+  group.add(bolt);
+  return { group, a, b, bolt, sparks: [], x, z, y, angry: true, resolved: false, leaving: false, leaveT: 0 };
 }
 
 function makeAgent() {
@@ -1226,18 +1232,17 @@ function makeArc() {
   return mesh;
 }
 
-function writeHeadBolt(mesh, a, b, time, lane) {
+function writeHeadBolt(mesh, time) {
   const pos = mesh.geometry.attributes.position;
   const segs = 6;
+  const flick = 0.62 + Math.abs(Math.sin(time * 23)) * 0.7;
   for (let i = 0; i <= segs; i++) {
     const t = i / segs;
-    const jag = i === 0 || i === segs ? 0 : (i % 2 ? 0.26 : -0.22) * lane;
-    const wobble = Math.sin(time * 14 + i + lane) * 0.04;
-    const x = a.x + (b.x - a.x) * t + jag + wobble;
-    const y = 1.72 + (lane > 0 ? 0.42 : 0) + Math.sin(t * Math.PI) * 0.48 + (i % 2 ? 0.16 : -0.14);
-    const z = (a.z + b.z) * 0.5 + lane * 0.16;
-    pos.setXYZ(i * 2, x, y + 0.09, z);
-    pos.setXYZ(i * 2 + 1, x, y - 0.09, z);
+    const jag = i === 0 || i === segs ? 0 : (i % 2 ? 0.28 : -0.24) * flick;
+    const y = 1.42 + t * 1.95;
+    const z = i % 2 ? 0.05 : -0.05;
+    pos.setXYZ(i * 2, jag, y + 0.09, z);
+    pos.setXYZ(i * 2 + 1, jag, y - 0.09, z);
   }
   pos.needsUpdate = true;
 }

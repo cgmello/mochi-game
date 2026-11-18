@@ -132,6 +132,10 @@ window.addEventListener('keydown', (event) => {
     begin();
     return;
   }
+  if (game.phase === 2 && (event.code === 'ArrowDown' || event.code === 'KeyS')) {
+    event.preventDefault();
+    return;
+  }
   const action = actionFor(event.code);
   if (!action) return;
   event.preventDefault();
@@ -147,6 +151,10 @@ window.addEventListener('keydown', (event) => {
 
 window.addEventListener('keyup', (event) => {
   held.delete(event.code);
+  if (game.phase === 2 && (event.code === 'ArrowDown' || event.code === 'KeyS')) {
+    event.preventDefault();
+    return;
+  }
   if (game.phase === 2) {
     const action = actionFor(event.code);
     if (action && action !== 'hop') game.hold(action, false);

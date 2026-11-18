@@ -10,18 +10,11 @@ export const ISLANDS = [
 
 export const MAP = { originX: 196, originZ: 0, span: 290 };
 
-const CLUSTERS = [
-  [14, 26],
-  [-20, 18],
-  [18, -28],
-  [-16, -24],
-  [32, 14],
-];
-
-const OFFSETS = [
-  [0, -0.15],
-  [2.4, 1.2],
-  [-2.4, 1.05],
+export const MOATS = [
+  [-40, 30], [-16, 38], [12, 36], [38, 24],
+  [-46, 10], [-20, 16], [22, 18], [44, 14],
+  [-38, -16], [-14, -20], [16, -14], [40, -22],
+  [-30, -40], [12, -44], [34, -36],
 ];
 
 export function bridgeSolids() {
@@ -47,28 +40,42 @@ export function bridgeSolids() {
 export function fightSpots() {
   const spots = [];
   for (const isle of ISLANDS) {
-    for (const [lx, lz] of CLUSTERS) {
-      for (const [ox, oz] of OFFSETS) {
-        spots.push({
-          x: isle.cx + lx + ox,
-          z: isle.cz + lz + oz,
-          y: 0.14,
-          island: isle.index,
-        });
-      }
+    for (const [lx, lz] of MOATS) {
+      spots.push({
+        x: isle.cx + lx,
+        z: isle.cz + lz,
+        y: 0.14,
+        island: isle.index,
+      });
     }
   }
   return spots;
 }
 
 export function clusterCenters() {
-  const out = [];
-  for (const isle of ISLANDS) {
-    for (const [lx, lz] of CLUSTERS) {
-      out.push({ x: isle.cx + lx, z: isle.cz + lz, island: isle.index });
+  return fightSpots();
+}
+
+export function overlapsSolid(x, z, solids, radius = 0.45) {
+  return solids.some((solid) => {
+    if (!solid || solid.dead) return false;
+    if (solid.top != null && solid.top <= 0.2) return false;
+    return Math.abs(x - solid.x) <= solid.hw + radius && Math.abs(z - solid.z) <= solid.hd + radius;
+  });
+}
+
+export function freeSpot(x, z, solids, radius = 0.45) {
+  if (!overlapsSolid(x, z, solids, radius)) return { x, z };
+  for (let ring = 1; ring <= 10; ring++) {
+    const dist = 0.65 * ring;
+    for (let i = 0; i < 10; i++) {
+      const ang = (i / 10) * Math.PI * 2 + ring;
+      const nx = x + Math.cos(ang) * dist;
+      const nz = z + Math.sin(ang) * dist;
+      if (!overlapsSolid(nx, nz, solids, radius)) return { x: nx, z: nz };
     }
   }
-  return out;
+  return { x, z: z - 3 };
 }
 
 export function onIsland(x, z) {

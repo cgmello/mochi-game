@@ -5,9 +5,11 @@ import {
   ISLANDS,
   bridgeSolids,
   fightSpots,
+  freeSpot,
   mapForward,
   mapMarkerAngle,
   onIsland,
+  overlapsSolid,
   whichIsland,
 } from '../src/game/phase2layout.js';
 
@@ -44,4 +46,23 @@ test('the course is 45 conflicts across three linked islands', () => {
   assert.equal(ISLANDS[0].name, 'Contract Market');
   assert.equal(ISLANDS[1].name, 'Oracle Port');
   assert.equal(ISLANDS[2].name, 'Rally Square');
+  for (const isle of ISLANDS) {
+    const mine = spots.filter((s) => s.island === isle.index);
+    for (let i = 0; i < mine.length; i++) {
+      for (let j = i + 1; j < mine.length; j++) {
+        const d = Math.hypot(mine[i].x - mine[j].x, mine[i].z - mine[j].z);
+        assert.ok(d > 11, `${isle.name} fights ${i} and ${j} are ${d.toFixed(1)}m apart`);
+      }
+    }
+  }
+});
+
+test('respawn nudges out of a solid and stays put on clear floor', () => {
+  const solids = [{ x: 2, z: 4, hw: 1.1, hd: 0.8, top: 1.4 }];
+  const blocked = freeSpot(2, 4, solids);
+  assert.equal(overlapsSolid(blocked.x, blocked.z, solids), false);
+  const open = freeSpot(12, -8, solids);
+  assert.deepEqual(open, { x: 12, z: -8 });
+  const deck = [{ x: 0, z: 0, hw: 4, hd: 2, top: 0.12 }];
+  assert.equal(overlapsSolid(0, 0, deck), false);
 });

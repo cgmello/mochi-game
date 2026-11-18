@@ -233,7 +233,7 @@ function paintPinkFloor() {
   const s = 256 / n;
   for (let y = 0; y < n; y++) {
     for (let x = 0; x < n; x++) {
-      g.fillStyle = (x + y) % 2 ? '#f4e7f8' : '#d7c4e4';
+      g.fillStyle = (x + y) % 2 ? '#ff7ad4' : '#e43a9a';
       g.fillRect(x * s + 3, y * s + 3, s - 6, s - 6);
       g.fillStyle = '#5a4568';
       for (let i = 0; i < 3; i++) {
@@ -254,9 +254,9 @@ function paintPinkFloor() {
 function paintGrate() {
   const c = canvas(256, 256);
   const g = c.getContext('2d');
-  g.fillStyle = '#8ea0ae';
+  g.fillStyle = '#1498a4';
   g.fillRect(0, 0, 256, 256);
-  g.strokeStyle = '#1c3c48';
+  g.strokeStyle = '#06343c';
   g.lineWidth = 3;
   for (let i = 0; i <= 16; i++) {
     g.beginPath();
@@ -275,9 +275,9 @@ function paintGrate() {
 function paintPcb() {
   const c = canvas(256, 256);
   const g = c.getContext('2d');
-  g.fillStyle = '#1a2744';
+  g.fillStyle = '#e07018';
   g.fillRect(0, 0, 256, 256);
-  g.strokeStyle = '#e2b15a';
+  g.strokeStyle = '#ffe08a';
   g.lineWidth = 3;
   g.beginPath();
   for (let i = 0; i < 14; i++) {

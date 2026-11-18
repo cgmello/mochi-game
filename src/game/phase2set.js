@@ -259,19 +259,19 @@ function hand(parent) {
 function skyline(parent) {
   const g = new THREE.Group();
   const colors = [MAT.navy, MAT.teal, MAT.purple, MAT.pink];
-  for (let i = 0; i < 16; i++) {
-    const ang = (i / 16) * Math.PI * 2;
-    const h = 7 + (i % 5) * 3.2;
+  for (let i = 0; i < 12; i++) {
+    const ang = -0.85 + (i / 11) * 1.7;
+    const h = 8 + (i % 5) * 2.8;
     const tower = new THREE.Mesh(new THREE.BoxGeometry(2.2, h, 2.2), colors[i % colors.length]);
-    tower.position.set(Math.cos(ang) * 92, h / 2 - 2, Math.sin(ang) * 92);
+    tower.position.set(Math.cos(ang) * 108, h / 2 + 8, Math.sin(ang) * 78);
     g.add(tower);
     if (i % 3 === 0) {
       const dome = new THREE.Mesh(new THREE.SphereGeometry(1.15, 10, 8), MAT.cyan);
-      dome.position.set(tower.position.x, h - 2, tower.position.z);
+      dome.position.set(tower.position.x, tower.position.y + h / 2 + 0.4, tower.position.z);
       g.add(dome);
     } else if (i % 3 === 1) {
       const spire = new THREE.Mesh(new THREE.ConeGeometry(0.35, 2.4, 5), MAT.orange);
-      spire.position.set(tower.position.x, h - 0.6, tower.position.z);
+      spire.position.set(tower.position.x, tower.position.y + h / 2 + 0.9, tower.position.z);
       g.add(spire);
     }
   }

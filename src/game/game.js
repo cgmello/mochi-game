@@ -244,6 +244,7 @@ export class Game {
       this.scene.fog.color.setHex(0x1a56d6);
       this.scene.fog.near = 200;
       this.scene.fog.far = 460;
+      this.camera.far = 500;
       this.camera.fov = 50;
       this.camera.updateProjectionMatrix();
     }

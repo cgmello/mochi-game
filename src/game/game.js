@@ -241,6 +241,7 @@ export class Game {
       this.roam.leave();
       for (const tile of this.tiles) tile.visible = true;
       for (const streak of this.streaks) streak.visible = true;
+      this.scene.fog.color.setHex(0x1a56d6);
       this.scene.fog.near = 200;
       this.scene.fog.far = 460;
       this.camera.fov = 50;
@@ -425,7 +426,10 @@ export class Game {
       done: this.doneCount,
       fees: this.phase === 2 ? this.roam.fees : 0,
       resolved: this.phase === 2 ? this.roam.resolved : 0,
-      goal: this.phase === 2 ? this.roam.goal : 10,
+      goal: this.phase === 2 ? this.roam.goal : 20,
+      timeLeft: this.phase === 2 ? this.roam.timeLeft : 0,
+      islandName: this.phase === 2 ? this.roam.islandName : '',
+      islandIndex: this.phase === 2 ? this.roam.islandIndex : 0,
       map: this.phase === 2 ? this.roam.mapSnapshot() : null,
       hint: this.hint,
       banner: this.bannerT > 0 ? this.bannerText : '',

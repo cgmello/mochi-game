@@ -271,7 +271,7 @@ button {
   gap: 10px;
 }
 
-#start, #to-phase2, #island-continue, #phase2, #again, #island-replay {
+#start, #to-phase2, #island-continue, #phase2, #again, #island-replay, #timeup-retry {
   border: 0;
   font-weight: 800;
   font-size: 20px;
@@ -279,7 +279,7 @@ button {
   padding: 12px 28px;
 }
 
-#start, #to-phase2, #island-continue {
+#start, #to-phase2, #island-continue, #timeup-retry {
   background: var(--orange);
   color: #1b1208;
   box-shadow: 0 8px 0 #b85d10;
@@ -291,8 +291,8 @@ button {
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
 }
 
-#start:hover, #to-phase2:hover, #island-continue:hover { transform: translateY(-1px); }
-#start:active, #to-phase2:active, #island-continue:active { transform: translateY(2px); box-shadow: 0 4px 0 #b85d10; }
+#start:hover, #to-phase2:hover, #island-continue:hover, #timeup-retry:hover { transform: translateY(-1px); }
+#start:active, #to-phase2:active, #island-continue:active, #timeup-retry:active { transform: translateY(2px); box-shadow: 0 4px 0 #b85d10; }
 
 #roam-hud:not([hidden]) { display: contents; }
 #roam-hud[hidden] { display: none !important; }
@@ -344,13 +344,14 @@ kbd {
 
 .swipe { margin: 8px 0 0; font-size: 13px; color: #b7c9dc; }
 
-#phase, #island {
+#phase, #island, #timeup {
   display: grid;
   place-items: center;
   background: rgba(8, 16, 36, 0.62);
   padding: 20px;
 }
-#phase[hidden], #island[hidden] { display: none; }
+#phase[hidden], #island[hidden], #timeup[hidden] { display: none; }
+#timer.low { color: #ff5d7a; }
 
 .phase-card {
   width: min(680px, 100%);

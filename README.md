@@ -2,7 +2,7 @@
 
 Protótipo jogável da **Fase 1** e da **Fase 2**. A Mochi, mascote da GenLayer, corre por um mundo de computadores, cabos e satélites para reunir **5 validadores**. Cada validador exige um stake de **42.000 GEN**.
 
-Quando os cinco estão completos, a Mochi vira a Adjudicator of the Internet e a **Fase 2** abre: uma ilha com ruas, praças, árvores, postes e torres de servidores, montanhas no horizonte, e a câmera bem atrás e acima, no estilo de um passeio em terceira pessoa. Pessoas andam pela ilha. Pares de robôs discutem, com falas em balões e raios vermelhos. A Mochi encosta neles, eles se acalmam, cada um sai para um lado, e uma moeda voa até ela. O botão **Fase 2** na tela de abertura entra direto nessa ilha.
+Quando os cinco estão completos, a Mochi vira a Adjudicator of the Internet e a **Fase 2** abre três ilhas, com a câmera atrás e acima. O chão tem grama e lajotas, e o cenário é cheio de racks, monitores, cabos, antenas e cubos de circuito. Pessoas com roupa texturizada andam pelas ruas. Robôs prateados discutem, com raios vermelhos e faíscas entre eles. O botão **Fase 2** na abertura entra direto na primeira ilha.
 
 Geometria 3D procedural em Three.js. Código original, sem assets pagos.
 
@@ -50,7 +50,9 @@ W, A, S, D e espaço repetem pulo e troca de faixa.
 | Seta esquerda / direita | Virar |
 | Espaço | Pular, inclusive de servidor em servidor |
 
-W, A e D repetem correr e virar. O minimapa redondo, embaixo à esquerda, mostra a Mochi e as brigas ainda ativas. Ao encostar num par, a discussão acaba: os robôs se acalmam, cada um anda para um lado, e uma moeda sai deles e voa até a Mochi. Uma fileira de servidores, se pulada em sequência até o último, faz a Mochi dar cambalhotas no ar; ao cair, entra um bônus de truque. Resolver 10 brigas abre a tela **Island resolved**; dá para continuar ou recomeçar a ilha.
+W, A e D repetem correr e virar. O minimapa mostra a Mochi e as brigas. Cada briga resolvida vale **1 token**. São **20 brigas** por ilha: a primeira, **Mercado de Contratos**, dura 60 segundos; **Porto dos Oráculos**, 45; **Praça do Rally**, 30. O tempo acaba numa tela de falha, com retry. Completar a ilha abre a seguinte.
+
+Cabos derrubam a Mochi, cubos de circuito dão choque, servidores instáveis desabam e insetos empurram ela para fora das plataformas. Cair custa 1 token e ela volta ao último **checkpoint**, um bloco que acende quando ela passa. Uma fileira de servidores, pulada em sequência até o último, faz a Mochi dar cambalhotas no ar.
 
 ## Regras
 

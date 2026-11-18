@@ -20,6 +20,14 @@ const muteBtn = document.getElementById('mute');
 const phaseScore = document.getElementById('phase-score');
 const island = document.getElementById('island');
 const islandScore = document.getElementById('island-score');
+const islandTitle = document.getElementById('island-title');
+const islandBody = document.getElementById('island-body');
+const islandContinue = document.getElementById('island-continue');
+const timeup = document.getElementById('timeup');
+const timeupName = document.getElementById('timeup-name');
+const timeupScore = document.getElementById('timeup-score');
+const timerEl = document.getElementById('timer');
+const islandNameEl = document.getElementById('island-name');
 const runScore = document.getElementById('run-score');
 const runStake = document.getElementById('run-stake');
 const roamHud = document.getElementById('roam-hud');
@@ -84,8 +92,9 @@ document.getElementById('again').addEventListener('click', () => {
   title.hidden = true;
   game.reset();
 });
-document.getElementById('island-continue').addEventListener('click', () => game.roam.continueWave());
+document.getElementById('island-continue').addEventListener('click', () => game.roam.nextIsland());
 document.getElementById('island-replay').addEventListener('click', () => game.roam.replay());
+document.getElementById('timeup-retry').addEventListener('click', () => game.roam.replay());
 muteBtn.addEventListener('click', () => {
   const muted = audio.toggle();
   muteBtn.textContent = muted ? 'Muted' : 'Sound';
@@ -261,6 +270,7 @@ function paint(snap) {
   hud.hidden = !playing;
   phase.hidden = snap.state !== 'done';
   island.hidden = snap.state !== 'cleared';
+  timeup.hidden = snap.state !== 'timeout';
   runScore.hidden = phase2;
   runStake.hidden = phase2;
   livesEl.hidden = phase2;
@@ -270,6 +280,10 @@ function paint(snap) {
   if (phase2) {
     feesEl.textContent = Math.floor(snap.fees).toLocaleString('en-US');
     resolvedEl.textContent = `${snap.resolved} / ${snap.goal} conflicts`;
+    islandNameEl.textContent = snap.islandName;
+    const secs = Math.max(0, Math.ceil(snap.timeLeft));
+    timerEl.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+    timerEl.classList.toggle('low', secs <= 10);
     drawMap(snap.map);
   }
   banner.textContent = snap.banner;
@@ -294,7 +308,17 @@ function paint(snap) {
     phaseScore.textContent = `Score ${Math.floor(snap.score).toLocaleString('en-US')}`;
   }
   if (snap.state === 'cleared') {
-    islandScore.textContent = `${snap.resolved} conflicts · ${Math.floor(snap.fees).toLocaleString('en-US')} GEN`;
+    const last = snap.islandIndex >= 2;
+    islandTitle.textContent = last ? 'Three islands settled' : `${snap.islandName} complete`;
+    islandBody.textContent = last
+      ? 'Mochi cleared the market, the harbor, and the rally.'
+      : 'The next island starts with a shorter clock.';
+    islandContinue.textContent = last ? 'Play again' : 'Next island';
+    islandScore.textContent = `${Math.floor(snap.fees)} tokens`;
+  }
+  if (snap.state === 'timeout') {
+    timeupName.textContent = `${snap.islandName} ran out of time.`;
+    timeupScore.textContent = `${Math.floor(snap.fees)} tokens kept`;
   }
 
   const live = new Set();

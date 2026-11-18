@@ -178,7 +178,7 @@ function paint(snap) {
     let node = popupNodes.get(popup.id);
     if (!node) {
       node = document.createElement('div');
-      node.className = `pop${popup.tier >= 5000 ? ' big' : popup.tier >= 1000 ? ' mid' : ''}`;
+      node.className = `pop${popup.tier >= 10000 ? ' mega' : popup.tier >= 5000 ? ' big' : popup.tier >= 1000 ? ' mid' : ''}`;
       node.textContent = popup.text;
       pops.appendChild(node);
       popupNodes.set(popup.id, node);

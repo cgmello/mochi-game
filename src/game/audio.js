@@ -62,6 +62,12 @@ export function createAudio() {
     },
     coin(tier) {
       const t = ensure().currentTime;
+      if (tier >= 10000) {
+        tone(784, t, 0.1, 0.05, 'triangle');
+        tone(1175, t + 0.06, 0.12, 0.04, 'sine');
+        tone(1568, t + 0.12, 0.2, 0.035, 'sine');
+        return;
+      }
       const f = tier >= 5000 ? 880 : tier >= 1000 ? 660 : 520;
       tone(f, t, 0.09, 0.045, 'triangle');
       tone(f * 1.5, t + 0.05, 0.12, 0.035, 'sine');

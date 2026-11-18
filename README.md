@@ -43,7 +43,7 @@ W, A, S, D e espaço repetem pulo e troca de faixa.
 
 ## Regras
 
-- As moedas GEN valem **500**, **1.000** ou **5.000**. O tamanho e o brilho mudam com o valor.
+- As moedas GEN valem **500**, **1.000**, **5.000** ou **10.000**. O tamanho e o brilho mudam com o valor. A de 10.000 é dourada, maior, com rastro de faíscas, e fica no alto: só dá para pegar no ponto mais alto do pulo (seta para cima).
 - O círculo do validador atual enche até 42.000 GEN. Ao completar, um robô validador aparece e cumprimenta a Mochi. O próximo validador começa do zero (o que passar de 42.000 entra no seguinte).
 - São **3 vidas**. Bater num obstáculo tira 1 vida e dá um instante de invulnerabilidade.
 - Ao perder as 3 vidas, o GEN do validador **atual** volta a zero. Validadores já conquistados permanecem, e as vidas enchem de novo.

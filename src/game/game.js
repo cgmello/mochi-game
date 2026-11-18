@@ -77,7 +77,7 @@ export class Game {
     this.height = 1;
 
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.Fog(0xb5e4f6, 34, 120);
+    this.scene.fog = new THREE.Fog(0xc9e0f2, 78, 220);
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 500);
     this.camPos = new THREE.Vector3(0, 4.1, -8.2);
     this.lookPos = new THREE.Vector3(0, 1.2, 8);
@@ -88,7 +88,7 @@ export class Game {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.08;
+    this.renderer.toneMappingExposure = 1.0;
 
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -96,7 +96,7 @@ export class Game {
     pmrem.dispose();
 
     this.scene.add(new THREE.HemisphereLight(0xd7ecff, 0xf0c08a, 1.35));
-    const sun = new THREE.DirectionalLight(0xfff2d6, 3.15);
+    const sun = new THREE.DirectionalLight(0xfff2d6, 2.35);
     sun.position.set(-28, 46, 16);
     const fill = new THREE.DirectionalLight(0xb7c4ff, 0.75);
     fill.position.set(18, 14, -10);
@@ -398,6 +398,7 @@ export class Game {
     if (i === 2) return this._duck(z, 2);
     if (i === 3) return this._tall(z);
     if (i === 4) return this._platform(z);
+    if (i === 5) return this._apex(z);
     const hard = this.doneCount;
     const table = [
       { w: 15, fn: () => this._coins(z, lane(), tier(), 4) },
@@ -409,6 +410,7 @@ export class Game {
       { w: 8, fn: () => this._cables(z) },
       { w: 7 + hard, fn: () => this._mixed(z) },
       { w: 6, fn: () => this._jackpot(z) },
+      { w: 7, fn: () => this._apex(z) },
       { w: 7, fn: () => this._overheadAll(z) },
     ];
     let total = 0;
@@ -479,6 +481,16 @@ export class Game {
     this._spawnCoin(z + 10, over, 500, 0.46);
   }
 
+  _apex(z) {
+    const id = lane();
+    this._spawnCoin(z + 12, id, 10000, 2.5);
+    for (const other of [0, 1, 2]) {
+      if (other === id) continue;
+      if (Math.random() < 0.7) this._spawnObstacle(z + 12, other, 'low');
+      else this._spawnCoin(z + 12, other, 500, 1.05);
+    }
+  }
+
   _jackpot(z) {
     const id = lane();
     this._spawnCoin(z + 8, id, 1000, 1.1);
@@ -502,6 +514,7 @@ export class Game {
       baseY: y,
       phase: Math.random() * Math.PI * 2,
       got: false,
+      marker: mesh.getObjectByName('marker'),
     });
   }
 
@@ -545,8 +558,18 @@ export class Game {
   _animateEntities(dt) {
     for (const e of this.entities) {
       if (e.kind === 'coin') {
-        e.mesh.rotation.y += dt * (e.tier >= 5000 ? 1.25 : 2.4);
-        e.mesh.position.y = e.baseY + Math.sin(this.time * 3 + e.phase) * 0.12;
+        const aerial = e.tier >= 10000;
+        e.mesh.rotation.y += dt * (aerial ? 1.7 : e.tier >= 5000 ? 1.25 : 2.4);
+        e.mesh.position.y = e.baseY + Math.sin(this.time * (aerial ? 2.2 : 3) + e.phase) * (aerial ? 0.16 : 0.12);
+        const sparks = e.mesh.userData.sparks;
+        if (sparks) {
+          sparks.forEach((spark, i) => {
+            const a = this.time * 4.2 + i * 0.85;
+            const trail = (i % 6) / 5;
+            spark.position.set(Math.cos(a) * (0.5 + trail * 0.35), Math.sin(a * 1.35) * 0.3, 0.2 + trail * 1.45);
+          });
+        }
+        if (e.marker) e.marker.position.y = (0.055 - e.mesh.position.y) / e.mesh.scale.y;
       } else if (e.blinkers) {
         for (const b of e.blinkers) {
           b.mat.emissiveIntensity = Math.sin(this.time * 6 + b.phase) > 0.1 ? 1.9 : 0.22;
@@ -557,19 +580,23 @@ export class Game {
 
   _collect() {
     const chest = this.y + 1.05;
+    const airborne = this.y > 0.55;
     for (const e of this.entities) {
       if (e.kind !== 'coin' || e.got) continue;
+      const aerial = e.tier >= 10000;
       const p = e.mesh.position;
       const dx = this.x - p.x;
       const dy = chest - e.baseY;
       const dz = -p.z;
-      if (dz < 2.5 && dz > -0.4 && Math.abs(dx) < 1.15 && Math.abs(dy) < 1.45) {
+      const magnetY = aerial ? 0.9 : 1.45;
+      if ((!aerial || airborne) && dz < 2.5 && dz > -0.4 && Math.abs(dx) < 1.15 && Math.abs(dy) < magnetY) {
         p.x += dx * 0.22;
         e.baseY += dy * 0.22;
       }
-      const reach = e.tier >= 5000 ? 1.05 : e.tier >= 1000 ? 0.86 : 0.72;
+      const reach = aerial ? 1.2 : e.tier >= 5000 ? 1.05 : e.tier >= 1000 ? 0.86 : 0.72;
       const dist = Math.hypot(p.x - this.x, e.baseY - chest, p.z);
-      const grace = p.z < 0.2 && p.z > -1.15 && Math.abs(p.x - this.x) < reach && Math.abs(e.baseY - chest) < 1.05;
+      const graceY = aerial ? 0.7 : 1.05;
+      const grace = p.z < 0.2 && p.z > -1.15 && Math.abs(p.x - this.x) < reach && Math.abs(e.baseY - chest) < graceY;
       if (dist < reach || grace) this._takeCoin(e);
     }
   }
@@ -581,8 +608,13 @@ export class Game {
     this.gen += e.tier;
     this.audio.coin(e.tier);
     this._popup(e.mesh.position, `+${e.tier.toLocaleString('en-US')}`, e.tier);
-    this._burst(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z, e.tier >= 5000 ? 16 : 8);
-    if (e.tier >= 5000) {
+    const n = e.tier >= 10000 ? 28 : e.tier >= 5000 ? 16 : 8;
+    this._burst(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z, n);
+    if (e.tier >= 10000) {
+      this.flash = Math.max(this.flash, 0.3);
+      this.flashColor = '#fff1a8';
+      this._ringAt(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z);
+    } else if (e.tier >= 5000) {
       this.flash = Math.max(this.flash, 0.22);
       this.flashColor = '#ffe7b0';
     }
@@ -710,6 +742,7 @@ export class Game {
     mochiArm.rotation.order = 'YXZ';
     mochiArm.rotation.x = -1.35 * raise;
     mochiArm.rotation.z = side * (0.45 + raise * 0.85);
+    if (mochiArm.elbow) mochiArm.elbow.rotation.x = -0.12;
     this.mochi.root.rotation.y = side * 0.55 * raise;
 
     if (!this.stakeImpact && t >= 0.55) {
@@ -769,6 +802,14 @@ export class Game {
       if (!best || z < best.mesh.position.z) best = e;
     }
     if (!best) {
+      for (const e of this.entities) {
+        if (e.kind !== 'coin' || e.tier < 10000 || e.got) continue;
+        const z = e.mesh.position.z;
+        if (z < 3 || z > 16) continue;
+        if (Math.abs(this.x - e.mesh.position.x) > 1.5) continue;
+        this.hint = '↑  Jump';
+        return;
+      }
       this.hint = '';
       return;
     }

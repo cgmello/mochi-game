@@ -23,14 +23,14 @@ export function makeGroundTexture(roadW) {
   const H = 512;
   const c = canvas(W, H);
   const g = c.getContext('2d');
-  g.fillStyle = '#e7c59a';
+  g.fillStyle = '#d7a36e';
   g.fillRect(0, 0, W, H);
 
   const u = (x) => ((x / roadW) + 0.5) * W;
   for (let y = 0; y < H; y += 48) {
     const offset = (y / 48) % 2 === 0 ? 0 : 18;
     for (let x = -20; x < W; x += 42) {
-      const shade = ((x + y) / 20) % 2 > 1 ? '#f0d2a8' : '#dcb488';
+      const shade = ((x + y) / 20) % 2 > 1 ? '#e6bc84' : '#c48958';
       g.fillStyle = shade;
       roundRect(g, x + offset, y + 3, 38, 42, 6);
       g.fill();
@@ -157,6 +157,200 @@ export function makeCubeTexture() {
   return srgbTexture(c);
 }
 
+export function makeGoldTexture() {
+  const c = canvas(256, 256);
+  const g = c.getContext('2d');
+  const grd = g.createLinearGradient(0, 256, 256, 0);
+  grd.addColorStop(0, '#ffe56a');
+  grd.addColorStop(0.22, '#ffb03a');
+  grd.addColorStop(0.4, '#ff4f9a');
+  grd.addColorStop(0.58, '#7af6ff');
+  grd.addColorStop(0.76, '#b388ff');
+  grd.addColorStop(1, '#fff1a8');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 256, 256);
+  const gloss = g.createRadialGradient(90, 70, 4, 120, 120, 150);
+  gloss.addColorStop(0, 'rgba(255,255,255,0.75)');
+  gloss.addColorStop(0.4, 'rgba(255,255,255,0.08)');
+  gloss.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gloss;
+  g.fillRect(0, 0, 256, 256);
+  g.fillStyle = 'rgba(255,255,255,0.85)';
+  for (let i = 0; i < 18; i++) {
+    const x = (i * 47) % 256;
+    const y = (i * 89) % 256;
+    g.fillRect(x, y, 3, 3);
+  }
+  return srgbTexture(c);
+}
+
+function paintCloud(g, x, y, s, color) {
+  g.fillStyle = color;
+  g.beginPath();
+  g.ellipse(x, y, 70 * s, 28 * s, 0, 0, Math.PI * 2);
+  g.ellipse(x - 48 * s, y + 8 * s, 46 * s, 24 * s, 0, 0, Math.PI * 2);
+  g.ellipse(x + 52 * s, y + 6 * s, 50 * s, 22 * s, 0, 0, Math.PI * 2);
+  g.ellipse(x + 10 * s, y - 16 * s, 40 * s, 24 * s, 0, 0, Math.PI * 2);
+  g.fill();
+}
+
+function paintCity(g, W, H) {
+  const cx = W * 0.5;
+  const cy = H * 0.58;
+  g.fillStyle = '#8a623c';
+  g.beginPath();
+  g.ellipse(cx, cy + 18, 250, 46, 0, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#6ea35a';
+  g.beginPath();
+  g.ellipse(cx, cy, 240, 36, 0, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#8dcc6a';
+  g.beginPath();
+  g.ellipse(cx - 20, cy - 6, 180, 22, 0, 0, Math.PI * 2);
+  g.fill();
+
+  const towers = [
+    [-150, 90, 28, '#2f8ea6'], [-110, 140, 22, '#7a5ad4'], [-70, 110, 26, '#3cb6c8'],
+    [-30, 170, 24, '#49c0d0'], [10, 200, 30, '#2a7fbe'], [50, 150, 22, '#8d81e1'],
+    [90, 120, 26, '#3cb6c8'], [130, 160, 20, '#ee8521'], [168, 100, 24, '#6a48c9'],
+    [-180, 70, 18, '#7c3aed'], [200, 80, 16, '#2f8ea6'],
+  ];
+  for (const [dx, h, w, color] of towers) {
+    const x = cx + dx - w / 2;
+    const y = cy - h;
+    g.fillStyle = color;
+    g.fillRect(x, y, w, h);
+    g.fillStyle = 'rgba(190, 250, 255, 0.85)';
+    for (let row = 8; row < h - 6; row += 12) {
+      for (let col = 4; col < w - 4; col += 7) g.fillRect(x + col, y + row, 3, 5);
+    }
+    g.fillStyle = 'rgba(255,255,255,0.35)';
+    g.fillRect(x, y, w, 3);
+  }
+}
+
+function paintCubes(g) {
+  const spots = [
+    [180, 180, 70], [360, 120, 48], [1520, 160, 80], [1760, 240, 46], [1680, 90, 36], [280, 280, 34],
+  ];
+  for (const [x, y, s] of spots) {
+    g.save();
+    g.translate(x, y);
+    g.rotate(-0.3);
+    g.fillStyle = '#6d4ad0';
+    g.fillRect(-s / 2, -s / 2, s, s);
+    g.strokeStyle = '#ff6ec8';
+    g.lineWidth = 3;
+    g.strokeRect(-s / 2, -s / 2, s, s);
+    g.beginPath();
+    g.moveTo(-s * 0.3, -s * 0.2);
+    g.lineTo(s * 0.1, -s * 0.2);
+    g.lineTo(s * 0.1, s * 0.15);
+    g.lineTo(s * 0.32, s * 0.15);
+    g.stroke();
+    g.restore();
+  }
+}
+
+export function makeBackdropTexture() {
+  const c = canvas(2048, 1024);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.magFilter = THREE.LinearFilter;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  const paint = (img) => {
+    paintBackdrop(c, img);
+    tex.needsUpdate = true;
+  };
+  paint(null);
+  const img = new Image();
+  img.onload = () => {
+    paint(img);
+    tex.userData.photo = true;
+  };
+  img.src = '/mockup.jpg';
+  return tex;
+}
+
+function paintBackdrop(c, img) {
+  const g = c.getContext('2d');
+  const W = c.width;
+  const H = c.height;
+  const sky = g.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#163e9e');
+  sky.addColorStop(0.28, '#2f74d8');
+  sky.addColorStop(0.52, '#79c4ef');
+  sky.addColorStop(0.74, '#f7b56a');
+  sky.addColorStop(1, '#f6d7b0');
+  g.fillStyle = sky;
+  g.fillRect(0, 0, W, H);
+
+  const glow = g.createRadialGradient(W * 0.5, H * 0.4, 20, W * 0.5, H * 0.42, 420);
+  glow.addColorStop(0, 'rgba(255, 236, 190, 0.95)');
+  glow.addColorStop(0.18, 'rgba(255, 150, 48, 0.75)');
+  glow.addColorStop(0.45, 'rgba(255, 120, 40, 0.18)');
+  glow.addColorStop(1, 'rgba(255, 120, 40, 0)');
+  g.fillStyle = glow;
+  g.fillRect(0, 0, W, H);
+  g.fillStyle = '#ff9324';
+  g.beginPath();
+  g.arc(W * 0.5, H * 0.4, 78, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#ffd27a';
+  g.beginPath();
+  g.arc(W * 0.5, H * 0.4, 48, 0, Math.PI * 2);
+  g.fill();
+
+  paintCloud(g, 260, 210, 1.4, 'rgba(255,255,255,0.92)');
+  paintCloud(g, 520, 150, 0.9, 'rgba(255,246,252,0.88)');
+  paintCloud(g, 1560, 180, 1.3, 'rgba(255,255,255,0.9)');
+  paintCloud(g, 1820, 260, 1.05, 'rgba(236, 226, 255, 0.85)');
+  paintCubes(g);
+  paintCity(g, W, H);
+
+  g.strokeStyle = 'rgba(255, 90, 190, 0.8)';
+  g.lineWidth = 3;
+  g.beginPath();
+  g.moveTo(300, 200);
+  g.lineTo(360, 250);
+  g.lineTo(330, 280);
+  g.lineTo(410, 340);
+  g.moveTo(1680, 160);
+  g.lineTo(1620, 230);
+  g.lineTo(1700, 270);
+  g.lineTo(1640, 330);
+  g.stroke();
+
+  if (img) {
+    const off = canvas(W, H);
+    const o = off.getContext('2d');
+    const cropH = Math.floor(img.height * 0.42);
+    o.drawImage(img, 0, 0, img.width, cropH, W * 0.1, H * 0.0, W * 0.8, H * 0.62);
+    o.globalCompositeOperation = 'destination-in';
+    const mask = o.createLinearGradient(0, H * 0.02, 0, H * 0.74);
+    mask.addColorStop(0, 'rgba(0,0,0,1)');
+    mask.addColorStop(0.55, 'rgba(0,0,0,0.88)');
+    mask.addColorStop(0.82, 'rgba(0,0,0,0.25)');
+    mask.addColorStop(1, 'rgba(0,0,0,0)');
+    o.fillStyle = mask;
+    o.fillRect(0, 0, W, H);
+    const side = o.createLinearGradient(W * 0.12, 0, W * 0.88, 0);
+    side.addColorStop(0, 'rgba(0,0,0,0)');
+    side.addColorStop(0.12, 'rgba(0,0,0,1)');
+    side.addColorStop(0.88, 'rgba(0,0,0,1)');
+    side.addColorStop(1, 'rgba(0,0,0,0)');
+    o.fillStyle = side;
+    o.fillRect(0, 0, W, H);
+    g.drawImage(off, 0, 0);
+  }
+
+  paintCloud(g, 180, 620, 1.6, 'rgba(255,255,255,0.55)');
+  paintCloud(g, 1860, 640, 1.5, 'rgba(255,248,252,0.5)');
+}
+
 export function makeGlowTexture() {
   const c = canvas(128, 128);
   const g = c.getContext('2d');
@@ -239,26 +433,31 @@ export function makeCoinGeometry() {
 
 export function createLibrary() {
   const gradient = makeGradientTexture();
+  const gold = makeGoldTexture();
   const ground = makeGroundTexture(8.4);
   const grass = makeGrassTexture();
   const screen = makeScreenTexture();
   const cube = makeCubeTexture();
   const glow = makeGlowTexture();
+  const backdrop = makeBackdropTexture();
   const shadow = makeShadowTexture();
   const face = makeFaceTexture();
   const mark = makeMarkGeometry();
   const coin = makeCoinGeometry();
 
-  const suit = new THREE.MeshStandardMaterial({ color: 0xf4f7fb, roughness: 0.48, metalness: 0.08 });
-  const helmet = new THREE.MeshStandardMaterial({ color: 0x1a1d27, roughness: 0.28, metalness: 0.62 });
-  const ear = new THREE.MeshStandardMaterial({ color: 0xff4fa3, roughness: 0.45, metalness: 0.05, emissive: 0x5a1238, emissiveIntensity: 0.25 });
-  const earIn = new THREE.MeshStandardMaterial({ color: 0xffc0dd, roughness: 0.5 });
-  const tail = new THREE.MeshStandardMaterial({ color: 0x14161c, roughness: 0.55 });
-  const glove = new THREE.MeshStandardMaterial({ color: 0x2a3142, roughness: 0.35, metalness: 0.55 });
+  const suit = new THREE.MeshStandardMaterial({ color: 0xf7f8fb, roughness: 0.42, metalness: 0.06 });
+  const helmet = new THREE.MeshStandardMaterial({ color: 0xf4f7fb, roughness: 0.32, metalness: 0.08 });
+  const silver = new THREE.MeshStandardMaterial({ color: 0xb7c0cc, roughness: 0.28, metalness: 0.72 });
+  const ear = new THREE.MeshStandardMaterial({ color: 0xff4fa3, roughness: 0.4, metalness: 0.04, emissive: 0x5a1238, emissiveIntensity: 0.2 });
+  const earIn = new THREE.MeshStandardMaterial({ color: 0xffd0e6, roughness: 0.45 });
+  const tail = new THREE.MeshStandardMaterial({ color: 0x2a1814, roughness: 0.62 });
+  const arm = new THREE.MeshStandardMaterial({ color: 0x3a4150, roughness: 0.42, metalness: 0.35 });
+  const glove = arm;
+  const cyanDot = new THREE.MeshBasicMaterial({ color: 0x7af6ff });
   const cyan = new THREE.MeshStandardMaterial({
     color: 0x062026,
     emissive: 0x39f3ff,
-    emissiveIntensity: 2.2,
+    emissiveIntensity: 2.4,
     roughness: 0.25,
     metalness: 0.2,
   });
@@ -279,10 +478,31 @@ export function createLibrary() {
     clearcoat: 1,
     clearcoatRoughness: 0.18,
   });
+  const coinGold = new THREE.MeshPhysicalMaterial({
+    map: gold,
+    emissiveMap: gold,
+    emissive: 0xfff6d0,
+    emissiveIntensity: 0.85,
+    metalness: 0.85,
+    roughness: 0.16,
+    clearcoat: 1,
+    clearcoatRoughness: 0.08,
+  });
   const coinRim = new THREE.MeshStandardMaterial({ color: 0xfff6ea, metalness: 0.85, roughness: 0.25 });
+  const coinRimGold = new THREE.MeshStandardMaterial({
+    color: 0xfff1b0,
+    emissive: 0xffc14a,
+    emissiveIntensity: 0.45,
+    metalness: 0.9,
+    roughness: 0.18,
+  });
   const markMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-  const server = new THREE.MeshStandardMaterial({ color: 0x2a2144, roughness: 0.62, metalness: 0.18 });
-  const serverLow = new THREE.MeshStandardMaterial({ color: 0x3a4660, roughness: 0.55, metalness: 0.2 });
+  const server = new THREE.MeshStandardMaterial({ color: 0x4a5568, roughness: 0.45, metalness: 0.42, emissive: 0x121820, emissiveIntensity: 0.4 });
+  const serverLow = new THREE.MeshStandardMaterial({ color: 0x5c6778, roughness: 0.42, metalness: 0.38 });
+  const rackFrame = new THREE.MeshStandardMaterial({ color: 0x5c6b80, roughness: 0.34, metalness: 0.62, emissive: 0x1a2433, emissiveIntensity: 0.25 });
+  const rackFace = new THREE.MeshStandardMaterial({ color: 0x2a3548, roughness: 0.46, metalness: 0.35, emissive: 0x101820, emissiveIntensity: 0.35 });
+  const rackBay = new THREE.MeshStandardMaterial({ color: 0x141c28, roughness: 0.55, metalness: 0.25 });
+  const rackTrim = new THREE.MeshStandardMaterial({ color: 0x9aa6b8, roughness: 0.32, metalness: 0.7 });
   const cable = new THREE.MeshStandardMaterial({ color: 0xee8521, roughness: 0.45, emissive: 0x7a3208, emissiveIntensity: 0.35 });
   const cableAlt = new THREE.MeshStandardMaterial({ color: 0x7c3aed, roughness: 0.45, emissive: 0x2a1468, emissiveIntensity: 0.3 });
   const bezel = new THREE.MeshStandardMaterial({ color: 0xd5dce8, roughness: 0.42, metalness: 0.12 });
@@ -290,9 +510,9 @@ export function createLibrary() {
   const screenMat = new THREE.MeshStandardMaterial({
     map: screen,
     emissiveMap: screen,
-    emissive: 0x8fd8ff,
-    emissiveIntensity: 0.55,
-    roughness: 0.32,
+    emissive: 0xcff6ff,
+    emissiveIntensity: 1.15,
+    roughness: 0.22,
   });
   const cubeMat = new THREE.MeshStandardMaterial({
     map: cube,
@@ -312,9 +532,11 @@ export function createLibrary() {
   const islandRock = new THREE.MeshStandardMaterial({ color: 0x8d6b45, roughness: 1 });
 
   return {
-    gradient, ground, grass, screen, cube, glow, shadow, face, mark, coin,
-    suit, helmet, ear, earIn, tail, glove, cyan, logo, coinMat, coinRim, markMat,
-    server, serverLow, cable, cableAlt, bezel, bezelDark, screenMat, cubeMat,
+    gradient, gold, ground, grass, screen, cube, glow, shadow, face, mark, coin, backdrop,
+    suit, helmet, silver, ear, earIn, tail, arm, glove, cyan, cyanDot, logo,
+    coinMat, coinGold, coinRim, coinRimGold, markMat,
+    server, serverLow, rackFrame, rackFace, rackBay, rackTrim,
+    cable, cableAlt, bezel, bezelDark, screenMat, cubeMat,
     grassMat, groundMat, skirtMat, stone, cityA, cityB, island, islandRock,
   };
 }

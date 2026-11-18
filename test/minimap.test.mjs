@@ -7,6 +7,9 @@ import {
   BACK,
   bonusSpots,
   clockLabel,
+  clearOfSpawn,
+  SPAWN_CLEAR,
+  watchMark,
   clockSpots,
   fightSpots,
   grantClock,
@@ -129,6 +132,23 @@ test('clock pickups add time once', () => {
   const minute = grantClock(20, { taken: false, seconds: 60 });
   assert.equal(minute.timeLeft, 80);
   assert.equal(minute.label, '+1:00');
+  assert.equal(watchMark(30), '+30s');
+  assert.equal(watchMark(60), '+1:00');
+  assert.ok(port.y >= 2.2 && rally.y >= 2.2);
+  assert.equal(port.mark, '+30s');
+  assert.equal(rally.mark, '+1:00');
+});
+
+test('phase 2 spawn stays clear of fights', () => {
+  const spots = fightSpots().filter((spot) => spot.island === 0);
+  for (const spot of spots) {
+    const d = Math.hypot(spot.x, spot.z + 52);
+    assert.ok(d > SPAWN_CLEAR, `fight at ${spot.x},${spot.z} is ${d.toFixed(1)}m from spawn`);
+  }
+  const nudged = clearOfSpawn(4, -48);
+  assert.ok(Math.hypot(nudged.x, nudged.z + 52) >= SPAWN_CLEAR - 0.01);
+  const far = clearOfSpawn(30, 10);
+  assert.deepEqual(far, { x: 30, z: 10 });
 });
 
 test('down walks backwards slower than forward', () => {

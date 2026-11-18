@@ -77,46 +77,33 @@ const held = new Set();
 const popupNodes = new Map();
 
 const TALKS = {
-  run: [
-    "Hi! I'm Mochi, the adjudicator of the internet.",
-    'Collect 42,000 GEN for each validator so 5 validators can join me!',
-    'Up or W jumps. Down or S ducks. Left and right change lanes. Grab every coin you can.',
-  ],
-  roam: [
-    'The validators are with me. Now I help the AI agents resolve their conflicts.',
-    'Walk up to an arguing pair. Each conflict you settle pays 1 token. You have 5 minutes.',
-    'Gold coins are worth 3 tokens. A clock on Oracle Port adds 30 seconds, and one on Rally Square adds a minute. Bridges link the islands.',
-  ],
+  run: {
+    kicker: 'Validator Run',
+    title: 'Stage 1',
+    story: "Hi! I'm Mochi. This game has two stages.",
+    goal: 'Stage 1: collect 42,000 GEN for each validator so 5 validators join me. Stage 2: resolve AI agent conflicts across 3 islands.',
+    controls: 'Up or W jumps. Down or S ducks. Left and right change lanes. Grab every coin you can.',
+  },
+  roam: {
+    kicker: 'Three islands',
+    title: 'Stage 2',
+    story: 'The validators are with me. Now I help the AI agents resolve their arguments.',
+    goal: 'Walk up to an arguing pair. Each conflict you settle pays 1 token. You have 5 minutes. Gold coins are worth 3. A stopwatch on Oracle Port adds 30 seconds, and one on Rally Square adds a minute.',
+    controls: 'Up or W runs forward. Down or S walks back. Left and right turn. Space jumps. Bridges link the three islands.',
+  },
 };
 
 const talkBox = document.getElementById('talk');
-const talkText = document.getElementById('talk-text');
-const talkNext = document.getElementById('talk-next');
 let talk = null;
 
 function openTalk(id) {
-  talk = { id, page: 0, shown: 0, t: 0 };
+  talk = id;
   game.talking = true;
   paintTalk();
 }
 
 function advanceTalk() {
   if (!talk) return;
-  const pages = TALKS[talk.id];
-  const text = pages[talk.page];
-  if (talk.shown < text.length) {
-    talk.shown = text.length;
-    talk.t = 99;
-    paintTalk();
-    return;
-  }
-  if (talk.page < pages.length - 1) {
-    talk.page += 1;
-    talk.shown = 0;
-    talk.t = 0;
-    paintTalk();
-    return;
-  }
   talk = null;
   game.talking = false;
   paintTalk();
@@ -127,11 +114,13 @@ function paintTalk() {
     talkBox.hidden = true;
     return;
   }
-  const pages = TALKS[talk.id];
-  const text = pages[talk.page];
+  const page = TALKS[talk];
   talkBox.hidden = false;
-  talkText.textContent = text.slice(0, talk.shown);
-  talkNext.hidden = talk.shown < text.length;
+  document.getElementById('talk-kicker').textContent = page.kicker;
+  document.getElementById('talk-title').textContent = page.title;
+  document.getElementById('talk-story').textContent = page.story;
+  document.getElementById('talk-goal').textContent = page.goal;
+  document.getElementById('talk-controls').textContent = page.controls;
 }
 
 function begin() {
@@ -493,12 +482,6 @@ function frame(now) {
   const dt = Math.min(0.033, (now - last) / 1000);
   last = now;
   if (!document.hidden) game.update(dt);
-  if (talk) {
-    const text = TALKS[talk.id][talk.page];
-    talk.t += dt;
-    talk.shown = Math.max(talk.shown, Math.min(text.length, Math.floor(talk.t * 42)));
-    paintTalk();
-  }
   game.render();
   paint(game.snapshot());
   requestAnimationFrame(frame);

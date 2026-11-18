@@ -12,6 +12,7 @@ import {
   fightSpots,
   freeSpot,
   grantClock,
+  clearOfSpawn,
   mapView,
   onIsland,
   roamPace,
@@ -261,7 +262,10 @@ export function createRoam(game) {
       game.bannerT = 2.4;
       game.audio.setTrack(Math.min(4, 2 + this.islandIndex));
       if (world.checks[0]) world.checks[0].active = true;
+      this._settleCrowd();
       this._placeMochi();
+      this.snapCam = true;
+      this._updateCamera(0);
     },
 
     _dropWorld() {
@@ -303,8 +307,16 @@ export function createRoam(game) {
         for (let n = 0; n < count; n++) {
           const kind = kinds[(isle.index + n) % kinds.length];
           const mesh = makePerson(kind);
-          const path = loop.map(([x, z]) => new THREE.Vector3(x, 0, z));
-          this.npcs.push({ mesh, path, seg: n % path.length, t: n * 0.27, speed: 1.05 + (n % 3) * 0.22 });
+          const path = loop.map(([x, z]) => {
+            const safe = clearOfSpawn(x, z);
+            return new THREE.Vector3(safe.x, 0, safe.z);
+          });
+          const npc = { mesh, path, seg: n % path.length, t: (n * 0.27) % 1, speed: 1.05 + (n % 3) * 0.22 };
+          const a = path[npc.seg];
+          const b = path[(npc.seg + 1) % path.length];
+          mesh.position.lerpVectors(a, b, npc.t);
+          mesh.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);
+          this.npcs.push(npc);
           world.group.add(mesh);
         }
       });
@@ -413,8 +425,8 @@ export function createRoam(game) {
         const dx = this.x - clock.x;
         const dz = this.z - clock.z;
         if (dx * dx + dz * dz > 1.25 * 1.25) continue;
-        const onPad = Math.abs(this.y - clock.y) < 1.35;
-        const inAir = Math.abs(this.y - clock.hover) < 1.15;
+        const onPad = this.y > clock.y - 0.2 && Math.abs(this.y - clock.y) < 0.45;
+        const inAir = this.y > clock.y + 0.45 && Math.abs(this.y - clock.hover) < 0.7;
         if (!onPad && !inAir) continue;
         const grant = grantClock(this.timeLeft, clock);
         if (!grant.gained) continue;
@@ -628,6 +640,20 @@ export function createRoam(game) {
         fight.a.rotation.y = -Math.PI / 2;
         fight.b.rotation.y = Math.PI / 2;
         if (fight.leaveT > 2.5) fight.group.visible = false;
+      }
+    },
+
+    _settleCrowd() {
+      this._updatePeople(0);
+      if (!world) return;
+      for (const bug of world.bugs) {
+        const ang = bug.phase;
+        bug.mesh.position.set(
+          bug.cx + Math.cos(ang) * bug.r,
+          bug.y,
+          bug.cz + Math.sin(ang) * bug.r,
+        );
+        bug.mesh.rotation.y = -ang;
       }
     },
 

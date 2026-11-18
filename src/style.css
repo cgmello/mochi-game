@@ -366,53 +366,63 @@ kbd {
 
 #talk {
   position: fixed;
-  left: 50%;
-  bottom: 22px;
-  transform: translateX(-50%);
-  width: min(780px, calc(100% - 28px));
-  z-index: 30;
-  display: flex;
-  gap: 14px;
-  align-items: stretch;
-  padding: 14px;
-  background: #14081c;
-  color: #fff8ea;
-  border: 4px solid #ffd15a;
-  box-shadow: 0 0 0 4px #1a1030, 0 0 0 8px #7af6ff;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 28px 18px;
+  background: rgba(6, 4, 16, 0.62);
   pointer-events: auto;
 }
 #talk[hidden] { display: none; }
+.talk-panel {
+  width: min(980px, 100%);
+  display: grid;
+  grid-template-columns: minmax(160px, 240px) 1fr;
+  gap: 22px;
+  align-items: center;
+  padding: 22px;
+  background: #14081c;
+  color: #fff8ea;
+  border: 6px solid #ffd15a;
+  box-shadow: 0 0 0 6px #1a1030, 0 0 0 12px #7af6ff;
+}
 .talk-portrait {
-  flex: 0 0 74px;
-  height: 74px;
+  width: 100%;
+  height: 320px;
+  object-fit: cover;
+  object-position: 46% 12%;
   background: #241038;
   border: 4px solid #ff4db2;
-  box-shadow: inset 0 0 0 3px #1a1030;
+  box-shadow: inset 0 0 0 4px #1a1030;
 }
-.talk-portrait svg { width: 100%; height: 100%; display: block; }
-.talk-body { flex: 1; min-width: 0; }
-#talk-text {
-  margin: 0;
-  min-height: 3.2em;
-  font-size: clamp(16px, 2vw, 20px);
-  font-weight: 700;
-  line-height: 1.35;
-  letter-spacing: 0.01em;
-}
-.talk-next {
-  margin: 8px 0 0;
-  text-align: right;
+.talk-kicker {
+  margin: 0 0 6px;
   font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #7af6ff;
+}
+.talk-copy h2 {
+  margin: 0 0 10px;
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.05;
+}
+.talk-copy p { margin: 0 0 10px; font-size: clamp(16px, 2vw, 20px); font-weight: 700; line-height: 1.35; }
+.talk-next {
+  margin: 16px 0 0;
+  text-align: right;
+  font-size: 14px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #ffd15a;
   animation: talk-blink 0.9s steps(2) infinite;
 }
 @keyframes talk-blink { 50% { opacity: 0; } }
 @media (max-width: 720px) {
-  #talk { bottom: 88px; padding: 10px; }
-  .talk-portrait { flex-basis: 56px; height: 56px; }
+  .talk-panel { grid-template-columns: 1fr; gap: 12px; padding: 14px; }
+  .talk-portrait { height: 180px; }
 }
 
 .phase-card {

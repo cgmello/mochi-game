@@ -1,8 +1,8 @@
 # Mochi — Adjudicator of the Internet
 
-Protótipo jogável da **Fase 1** e da **Fase 2**. A Mochi, mascote da GenLayer, corre por um mundo de computadores, cabos e satélites para reunir **5 validadores**. Cada validador exige um stake de **42.000 GEN**.
+Protótipo jogável em **duas etapas**. Na **Stage 1** (Validator Run), a Mochi, mascote da GenLayer, corre por um mundo de computadores, cabos e satélites para reunir **5 validadores**. Cada validador exige um stake de **42.000 GEN**.
 
-Quando os cinco estão completos, a Mochi vira a Adjudicator of the Internet e a **Fase 2** abre um percurso só: Contract Market, Oracle Port e Rally Square, ligados por pontes, com a câmera atrás e acima. Cada ilha tem cor e piso próprios. Robôs prateados discutem sob um raio vermelho vertical. O botão **Phase 2** na abertura entra direto em Contract Market.
+Quando os cinco estão completos, a Mochi vira a Adjudicator of the Internet e a **Stage 2** abre um percurso só: Contract Market, Oracle Port e Rally Square, ligados por pontes, com a câmera atrás e acima. Cada ilha tem cor e piso próprios. Robôs prateados discutem sob um raio vermelho vertical. O botão **Stage 2** na abertura entra direto em Contract Market.
 
 Geometria 3D procedural em Three.js. Código original, sem assets pagos.
 
@@ -30,7 +30,7 @@ Testes da colisão (sem abrir o navegador):
 npm test
 ```
 
-## Controles da Fase 1
+## Controles da Stage 1
 
 | Tecla | Ação |
 | --- | --- |
@@ -41,7 +41,7 @@ npm test
 
 W, A, S, D e espaço repetem pulo e troca de faixa.
 
-## Controles da Fase 2
+## Controles da Stage 2
 
 | Tecla | Ação |
 | --- | --- |
@@ -50,7 +50,7 @@ W, A, S, D e espaço repetem pulo e troca de faixa.
 | Seta esquerda / direita | Virar |
 | Espaço | Pular, inclusive de servidor em servidor |
 
-W, A e D repetem correr e virar. Seta para baixo e S andam para trás devagar. O minimapa mostra só a ilha em que a Mochi está, ampliada até preencher o círculo, com as saídas das pontes na borda. No meio de uma ponte, o mapa troca para a ilha mais próxima e mostra a ponte. Cada briga resolvida vale **1 token**. Moedas douradas grandes, em lugares altos, valem **3 tokens** e aparecem no minimapa. Um relógio em Oracle Port soma **30 segundos**; outro em Rally Square soma **1 minuto**. No começo de cada fase, uma caixa de diálogo explica a missão. O jogo fica parado até você apertar Enter ou Espaço. No fim da fase, Enter recomeça e Esc volta ao menu. São **45 brigas** numa corrida só, uma dupla por fosso, cerca de 15 em cada ilha, com **5 minutos** no relógio: **Contract Market** (piso rosa), **Oracle Port** (grade verde-água) e **Rally Square** (laranja e ouro). Pontes livres ligam as ilhas. Aranhas-robô patrulham o piso. Faixas com setas dão cerca de 3 segundos de impulso.
+W, A e D repetem correr e virar. Seta para baixo e S andam para trás devagar. O minimapa mostra só a ilha em que a Mochi está, ampliada até preencher o círculo, com as saídas das pontes na borda. No meio de uma ponte, o mapa troca para a ilha mais próxima e mostra a ponte. Cada briga resolvida vale **1 token**. Moedas douradas grandes, em lugares altos, valem **3 tokens** e aparecem no minimapa. Um cronômetro alto em Oracle Port soma **30 segundos** (`+30s`); outro em Rally Square soma **1 minuto** (`+1:00`). Os dois giram no eixo vertical, como as moedas. No começo de cada etapa, um painel grande no centro mostra o texto inteiro de uma vez, com o retrato da Mochi. O jogo fica parado até você apertar Enter ou Espaço. No fim da Stage 2, Enter recomeça e Esc volta ao menu. São **45 brigas** numa corrida só, uma dupla por fosso, cerca de 15 em cada ilha, com **5 minutos** no relógio: **Contract Market** (piso rosa), **Oracle Port** (grade verde-água) e **Rally Square** (laranja e ouro). Pontes livres ligam as ilhas. Aranhas-robô patrulham o piso. Faixas com setas dão cerca de 3 segundos de impulso.
 
 Se o tempo acaba, a tela **THE END** aparece, os tokens da corrida se perdem e o percurso recomeça. Vencer é juntar os 45. Buracos em volta dos agentes têm borda de alerta e um vão ou uma ponte. Cair custa 1 token e a Mochi volta ao último **checkpoint**. Uma fileira de servidores, pulada em sequência até o último, faz a Mochi dar cambalhotas no ar.
 
@@ -63,6 +63,6 @@ Se o tempo acaba, a tela **THE END** aparece, os tokens da corrida se perdem e o
 - O círculo do validador atual enche até 42.000 GEN. Ao completar, um robô validador aparece e cumprimenta a Mochi. O próximo validador começa do zero (o que passar de 42.000 entra no seguinte).
 - São **3 vidas**. Bater num obstáculo tira 1 vida e dá um instante de invulnerabilidade.
 - Ao perder as 3 vidas, o GEN do validador **atual** volta a zero. Validadores já conquistados permanecem, e as vidas enchem de novo.
-- Com os 5 validadores, a Fase 1 termina e a Fase 2 pode começar. A música continua nas duas fases e fica mais cheia conforme as brigas da ilha são resolvidas. O botão Sound corta efeitos e música.
+- Com os 5 validadores, a Stage 1 termina e a Stage 2 pode começar. A música continua nas duas etapas e fica mais cheia conforme as brigas da ilha são resolvidas. O botão Sound corta efeitos e música.
 
 A tela de abertura usa `public/mockup.jpg`.

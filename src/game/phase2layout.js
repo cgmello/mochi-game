@@ -15,7 +15,7 @@ const FIGHTS = {
     [-42, 22, 0, 'alley'], [-24, 36, 0.85, 'crate'], [-4, 40, 0.14, 'moat'], [22, 30, 1.75, 'rack'],
     [42, 16, 0, 'corner'], [-48, 2, 0.12, 'bridge'], [-26, 4, 1.35, 'platform'], [6, 8, 0, 'alley'],
     [28, 2, 0.85, 'crate'], [50, -6, 0.12, 'bridge'], [-36, -20, 0.14, 'moat'], [-10, -24, 1.75, 'rack'],
-    [16, -18, 0, 'alley'], [38, -30, 1.35, 'platform'], [-18, -44, 0, 'corner'],
+    [16, -18, 0, 'alley'], [38, -30, 1.35, 'platform'], [-36, -40, 0, 'corner'],
   ],
   harbor: [
     [-64, 22, 0.32, 'dock'], [-30, 38, 1.75, 'rack'], [-6, 46, 0.14, 'moat'], [20, 34, 0.85, 'crate'],
@@ -93,9 +93,25 @@ export function bonusSpots() {
 }
 
 const CLOCKS = [
-  { island: 1, lx: 34, lz: 44, y: 1.65, seconds: 30 },
-  { island: 2, lx: -18, lz: 28, y: 1.7, seconds: 60 },
+  { island: 1, lx: 34, lz: 44, y: 2.4, seconds: 30 },
+  { island: 2, lx: -18, lz: 28, y: 2.45, seconds: 60 },
 ];
+
+export const SPAWN = { x: 0, z: -52 };
+export const SPAWN_CLEAR = 18;
+
+export function clearOfSpawn(x, z, radius = SPAWN_CLEAR) {
+  const dx = x - SPAWN.x;
+  const dz = z - SPAWN.z;
+  const d = Math.hypot(dx, dz);
+  if (d >= radius || d < 0.001) return { x, z };
+  const k = radius / d;
+  return { x: SPAWN.x + dx * k, z: SPAWN.z + dz * k };
+}
+
+export function watchMark(seconds) {
+  return seconds >= 60 ? '+1:00' : '+30s';
+}
 
 export function clockSpots() {
   return CLOCKS.map((spot) => {
@@ -107,6 +123,7 @@ export function clockSpots() {
       seconds: spot.seconds,
       island: spot.island,
       label: clockLabel(spot.seconds),
+      mark: watchMark(spot.seconds),
     };
   });
 }

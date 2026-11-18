@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { matte } from './phase2tex.js';
 import { addSetPieces } from './phase2set.js';
-import { ISLANDS, ISLAND_R, bridgeSolids, clusterCenters, fightSpots, bonusSpots, clockSpots, freeSpot } from './phase2layout.js';
+import { ISLANDS, ISLAND_R, bridgeSolids, clusterCenters, fightSpots, bonusSpots, clockSpots, freeSpot, clearOfSpawn, watchMark } from './phase2layout.js';
 
 const TRICK = [
   [12, 6.2], [14.8, 6.2], [17.6, 6.2], [20.4, 6.2], [23.2, 6.2],
@@ -592,7 +592,10 @@ function addHazards(group, cables, zaps, bugs) {
     const cableSpots = [
       { x: isle.cx + 24, z: isle.cz + 14, rot: 0.4, hw: 1.5 },
       { x: isle.cx - 26, z: isle.cz - 16, rot: -0.3, hw: 1.4 },
-    ];
+    ].map((cable) => {
+      const safe = clearOfSpawn(cable.x, cable.z);
+      return { ...cable, x: safe.x, z: safe.z };
+    });
     for (const cable of cableSpots) {
       if (nearCluster(cable.x, cable.z)) continue;
       const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, cable.hw * 2, 6), cableMat);
@@ -605,7 +608,10 @@ function addHazards(group, cables, zaps, bugs) {
     const zapSpots = [
       [isle.cx + 30, isle.cz + 20],
       [isle.cx - 28, isle.cz - 22],
-    ];
+    ].map(([x, z]) => {
+      const safe = clearOfSpawn(x, z);
+      return [safe.x, safe.z];
+    });
     for (const [x, z] of zapSpots) {
       if (nearCluster(x, z)) continue;
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), zapMat);
@@ -615,11 +621,18 @@ function addHazards(group, cables, zaps, bugs) {
     }
   }
   for (const isle of ISLANDS) {
-    const patrols = [[-24, 18], [30, -22], [-16, -34], [22, 26]];
+    const patrols = isle.index === 0
+      ? [[-24, 18], [30, -8], [-40, 8], [22, 26]]
+      : [[-24, 18], [30, -22], [-16, -34], [22, 26]];
     patrols.forEach(([lx, lz], i) => {
       const mesh = makeSpider();
+      const safe = clearOfSpawn(isle.cx + lx, isle.cz + lz);
+      const bug = { mesh, cx: safe.x, cz: safe.z, r: 1.5, y: 0, phase: isle.index + i };
+      const ang = bug.phase;
+      mesh.position.set(bug.cx + Math.cos(ang) * bug.r, bug.y, bug.cz + Math.sin(ang) * bug.r);
+      mesh.rotation.y = -ang;
       group.add(mesh);
-      bugs.push({ mesh, cx: isle.cx + lx, cz: isle.cz + lz, r: 1.5, y: 0, phase: isle.index + i });
+      bugs.push(bug);
     });
   }
 }
@@ -783,54 +796,95 @@ function addClocks(group, solids, tex) {
   const cyan = new THREE.MeshStandardMaterial({ color: 0x7af6ff, emissive: 0x14c8e0, emissiveIntensity: 0.95, metalness: 0.3, roughness: 0.22 });
   const clocks = [];
   for (const spot of clockSpots()) {
-    const pedestal = new THREE.Mesh(new THREE.BoxGeometry(1.45, spot.y, 1.45), matte(tex.metal, 0xb7fff4, 0.4));
+    const pedestal = new THREE.Mesh(new THREE.BoxGeometry(1.7, spot.y, 2.7), matte(tex.metal, 0xb7fff4, 0.4));
     pedestal.position.set(spot.x, spot.y / 2, spot.z);
     const mesh = makeClock(gold, cyan, spot.seconds);
-    mesh.position.set(spot.x, spot.y + 1.35, spot.z);
-    mesh.scale.setScalar(1.45);
+    mesh.position.set(spot.x, spot.y + 1.05, spot.z);
+    mesh.scale.setScalar(1.35);
     group.add(pedestal, mesh);
-    solids.push({ x: spot.x, z: spot.z, hw: 0.72, hd: 0.72, top: spot.y });
-    const stepTop = Math.min(0.78, spot.y * 0.46);
-    const step = new THREE.Mesh(new THREE.BoxGeometry(1.15, stepTop, 1.05), matte(tex.metal, 0xffe3a1, 0.45));
-    step.position.set(spot.x, stepTop / 2, spot.z - 1.45);
+    solids.push({ x: spot.x, z: spot.z, hw: 0.85, hd: 1.35, top: spot.y });
+    const stepTop = 0.95;
+    const step = new THREE.Mesh(new THREE.BoxGeometry(1.8, stepTop, 1.45), matte(tex.metal, 0xffe3a1, 0.45));
+    step.position.set(spot.x, stepTop / 2, spot.z - 1.85);
     group.add(step);
-    solids.push({ x: spot.x, z: spot.z - 1.45, hw: 0.55, hd: 0.5, top: stepTop });
-    clocks.push({ ...spot, mesh, glow: mesh.userData.glow, hover: spot.y + 1.35, taken: false });
+    solids.push({ x: spot.x, z: spot.z - 1.85, hw: 0.9, hd: 0.72, top: stepTop });
+    clocks.push({ ...spot, mesh, glow: mesh.userData.glow, hover: spot.y + 1.05, taken: false });
   }
   return clocks;
 }
 
+function watchFace(text) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 256, 128);
+  ctx.fillStyle = '#1a1030';
+  ctx.fillRect(6, 22, 244, 84);
+  ctx.strokeStyle = '#7af6ff';
+  ctx.lineWidth = 8;
+  ctx.strokeRect(6, 22, 244, 84);
+  ctx.fillStyle = '#ffd15a';
+  ctx.font = '700 62px Trebuchet MS, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 128, 64);
+  const map = new THREE.CanvasTexture(canvas);
+  map.colorSpace = THREE.SRGBColorSpace;
+  const plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.05, 0.52),
+    new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, toneMapped: false }),
+  );
+  plane.rotation.x = -Math.PI / 2;
+  plane.position.y = 0.2;
+  return plane;
+}
+
 function makeClock(gold, cyan, seconds) {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.52, 0.18, 24), gold);
+  const full = seconds >= 60;
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.1, 40), gold);
   const face = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.34, 0.34, 0.05, 20),
-    new THREE.MeshBasicMaterial({ color: seconds >= 60 ? 0xfff3c4 : 0xe7fbff, toneMapped: false }),
+    new THREE.CylinderGeometry(0.48, 0.48, 0.035, 40),
+    new THREE.MeshBasicMaterial({ color: 0xf4fbff, toneMapped: false }),
   );
-  face.position.y = 0.1;
-  const minute = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.03, 0.24), cyan);
-  minute.position.set(0, 0.15, 0.06);
-  const hour = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.03, 0.045), cyan);
-  hour.position.set(0.05, 0.15, 0);
-  const bellL = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 8), gold);
-  bellL.position.set(-0.3, 0.24, 0);
-  const bellR = bellL.clone();
-  bellR.position.x = 0.3;
-  const crown = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.028, 6, 14, Math.PI), gold);
-  crown.rotation.z = Math.PI;
-  crown.position.y = 0.26;
+  face.position.y = 0.06;
+  const bezel = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.04, 8, 36), cyan);
+  bezel.rotation.x = Math.PI / 2;
+  bezel.position.y = 0.075;
+  const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.22, 12), gold);
+  crown.rotation.x = Math.PI / 2;
+  crown.position.set(0, 0.08, -0.72);
+  const button = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.08, 10), cyan);
+  button.rotation.x = Math.PI / 2;
+  button.position.set(0, 0.08, -0.86);
+  const marks = new THREE.Group();
+  for (let i = 0; i < 12; i++) {
+    const tick = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.02, i % 3 === 0 ? 0.11 : 0.06), cyan);
+    const a = (i / 12) * Math.PI * 2;
+    tick.position.set(Math.sin(a) * 0.38, 0.1, -Math.cos(a) * 0.38);
+    tick.rotation.y = a;
+    marks.add(tick);
+  }
+  const hand = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.04, 0.4), cyan);
+  hand.position.set(0, 0.13, full ? -0.14 : 0.14);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.04, 12), gold);
+  hub.position.y = 0.125;
   const glow = new THREE.Mesh(
-    new THREE.TorusGeometry(0.78, 0.05, 8, 28),
+    new THREE.TorusGeometry(0.86, 0.045, 8, 32),
     new THREE.MeshBasicMaterial({ color: 0x7af6ff, transparent: true, opacity: 0.9, toneMapped: false }),
   );
   glow.rotation.x = Math.PI / 2;
   const halo = new THREE.Mesh(
-    new THREE.RingGeometry(0.64, 0.98, 28),
-    new THREE.MeshBasicMaterial({ color: 0xffd15a, transparent: true, opacity: 0.38, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
+    new THREE.RingGeometry(0.72, 1.08, 32),
+    new THREE.MeshBasicMaterial({ color: 0xffd15a, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
   );
   halo.rotation.x = -Math.PI / 2;
   halo.position.y = -0.02;
-  g.add(body, face, minute, hour, bellL, bellR, crown, glow, halo);
+  const tag = watchFace(watchMark(seconds));
+  tag.rotation.set(0, Math.PI, 0);
+  tag.position.set(0, 0.95, 0);
+  g.add(disc, face, bezel, crown, button, marks, hand, hub, watchFace(watchMark(seconds)), tag, glow, halo);
   g.userData.kind = 'clock';
   g.userData.seconds = seconds;
   g.userData.glow = glow;

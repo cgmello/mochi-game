@@ -92,6 +92,35 @@ export function bonusSpots() {
   });
 }
 
+const CLOCKS = [
+  { island: 1, lx: 34, lz: 44, y: 1.65, seconds: 30 },
+  { island: 2, lx: -18, lz: 28, y: 1.7, seconds: 60 },
+];
+
+export function clockSpots() {
+  return CLOCKS.map((spot) => {
+    const isle = ISLANDS[spot.island];
+    return {
+      x: isle.cx + spot.lx,
+      z: isle.cz + spot.lz,
+      y: spot.y,
+      seconds: spot.seconds,
+      island: spot.island,
+      label: clockLabel(spot.seconds),
+    };
+  });
+}
+
+export function clockLabel(seconds) {
+  const s = Math.max(0, Math.round(seconds));
+  return `+${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+export function grantClock(timeLeft, clock) {
+  if (!clock || clock.taken) return { timeLeft, gained: 0, label: '' };
+  return { timeLeft: timeLeft + clock.seconds, gained: clock.seconds, label: clockLabel(clock.seconds) };
+}
+
 export function roamPace(holds, pace, backPace = BACK) {
   if (holds.forward) return pace;
   if (holds.back) return -backPace;

@@ -76,27 +76,101 @@ window.__game = game;
 const held = new Set();
 const popupNodes = new Map();
 
+const TALKS = {
+  run: [
+    "Hi! I'm Mochi, the adjudicator of the internet.",
+    'Collect 42,000 GEN for each validator so 5 validators can join me!',
+    'Up or W jumps. Down or S ducks. Left and right change lanes. Grab every coin you can.',
+  ],
+  roam: [
+    'The validators are with me. Now I help the AI agents resolve their conflicts.',
+    'Walk up to an arguing pair. Each conflict you settle pays 1 token. You have 5 minutes.',
+    'Gold coins are worth 3 tokens. A clock on Oracle Port adds 30 seconds, and one on Rally Square adds a minute. Bridges link the islands.',
+  ],
+};
+
+const talkBox = document.getElementById('talk');
+const talkText = document.getElementById('talk-text');
+const talkNext = document.getElementById('talk-next');
+let talk = null;
+
+function openTalk(id) {
+  talk = { id, page: 0, shown: 0, t: 0 };
+  game.talking = true;
+  paintTalk();
+}
+
+function advanceTalk() {
+  if (!talk) return;
+  const pages = TALKS[talk.id];
+  const text = pages[talk.page];
+  if (talk.shown < text.length) {
+    talk.shown = text.length;
+    talk.t = 99;
+    paintTalk();
+    return;
+  }
+  if (talk.page < pages.length - 1) {
+    talk.page += 1;
+    talk.shown = 0;
+    talk.t = 0;
+    paintTalk();
+    return;
+  }
+  talk = null;
+  game.talking = false;
+  paintTalk();
+}
+
+function paintTalk() {
+  if (!talk) {
+    talkBox.hidden = true;
+    return;
+  }
+  const pages = TALKS[talk.id];
+  const text = pages[talk.page];
+  talkBox.hidden = false;
+  talkText.textContent = text.slice(0, talk.shown);
+  talkNext.hidden = talk.shown < text.length;
+}
+
 function begin() {
   if (!game || game.state !== 'title') return;
   title.hidden = true;
   game.start();
+  openTalk('run');
 }
 
 function beginPhase2() {
   title.hidden = true;
   game.startPhase2();
+  openTalk('roam');
 }
 
 document.getElementById('start').addEventListener('click', begin);
 document.getElementById('phase2').addEventListener('click', beginPhase2);
-document.getElementById('to-phase2').addEventListener('click', () => game.startPhase2());
+document.getElementById('to-phase2').addEventListener('click', beginPhase2);
 document.getElementById('again').addEventListener('click', () => {
   title.hidden = true;
   game.reset();
+  openTalk('run');
 });
-document.getElementById('island-continue').addEventListener('click', () => game.roam.nextIsland());
-document.getElementById('island-replay').addEventListener('click', () => game.roam.replay());
-document.getElementById('timeup-retry').addEventListener('click', () => game.roam.replay());
+talkBox.addEventListener('click', () => advanceTalk());
+function restartPhase() {
+  title.hidden = true;
+  game.roam.replay();
+  openTalk('roam');
+}
+
+function mainMenu() {
+  game.toTitle();
+  title.hidden = false;
+}
+
+document.getElementById('island-continue').addEventListener('click', restartPhase);
+document.getElementById('island-menu').addEventListener('click', mainMenu);
+document.getElementById('timeup-retry').addEventListener('click', restartPhase);
+document.getElementById('timeup-menu').addEventListener('click', mainMenu);
 muteBtn.addEventListener('click', () => {
   const muted = audio.toggle();
   muteBtn.textContent = muted ? 'Muted' : 'Sound';
@@ -130,6 +204,23 @@ function actionFor(code) {
 }
 
 window.addEventListener('keydown', (event) => {
+  if (game.talking) {
+    event.preventDefault();
+    if (event.code === 'Enter' || event.code === 'Space') advanceTalk();
+    return;
+  }
+  if (game.phase === 2 && (game.state === 'timeout' || game.state === 'cleared')) {
+    if (event.code === 'Enter') {
+      event.preventDefault();
+      restartPhase();
+      return;
+    }
+    if (event.code === 'Escape') {
+      event.preventDefault();
+      mainMenu();
+      return;
+    }
+  }
   if (game.state === 'title' && (event.code === 'Enter' || event.code === 'Space')) {
     event.preventDefault();
     begin();
@@ -278,6 +369,24 @@ function drawMap(map) {
     ctx.fillRect(-4.2, -4.2, 8.4, 8.4);
     ctx.restore();
   }
+  ctx.strokeStyle = '#7af6ff';
+  ctx.fillStyle = '#ffd15a';
+  ctx.lineWidth = 1.6;
+  for (const clock of map.clocks || []) {
+    ctx.save();
+    ctx.translate(px(clock.x), py(clock.z));
+    ctx.beginPath();
+    ctx.arc(0, 0, 5.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, 0.4);
+    ctx.lineTo(0, -3.2);
+    ctx.moveTo(0, 0.4);
+    ctx.lineTo(2.4, 1.4);
+    ctx.stroke();
+    ctx.restore();
+  }
   ctx.fillStyle = '#ff3358';
   for (const fight of map.fights || []) {
     ctx.beginPath();
@@ -299,6 +408,7 @@ function drawMap(map) {
 }
 
 function paint(snap) {
+  title.hidden = snap.state !== 'title';
   const playing = snap.state !== 'title';
   const phase2 = snap.phase === 2;
   hud.hidden = !playing;
@@ -318,7 +428,8 @@ function paint(snap) {
     islandNameEl.textContent = snap.islandName;
     const secs = Math.max(0, Math.ceil(snap.timeLeft));
     timerEl.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
-    timerEl.classList.toggle('low', secs <= 10);
+    timerEl.classList.toggle('bonus', snap.timeFlash > 0);
+    timerEl.classList.toggle('low', secs <= 10 && !(snap.timeFlash > 0));
     drawMap(snap.map);
   }
   banner.textContent = snap.banner;
@@ -345,7 +456,6 @@ function paint(snap) {
   if (snap.state === 'cleared') {
     islandTitle.textContent = 'Course complete';
     islandBody.textContent = 'All 45 conflicts across Contract Market, Oracle Port, and Rally Square are settled.';
-    islandContinue.textContent = 'Play again';
     islandScore.textContent = `${Math.floor(snap.fees)} tokens`;
   }
   if (snap.state === 'timeout') {
@@ -383,6 +493,12 @@ function frame(now) {
   const dt = Math.min(0.033, (now - last) / 1000);
   last = now;
   if (!document.hidden) game.update(dt);
+  if (talk) {
+    const text = TALKS[talk.id][talk.page];
+    talk.t += dt;
+    talk.shown = Math.max(talk.shown, Math.min(text.length, Math.floor(talk.t * 42)));
+    paintTalk();
+  }
   game.render();
   paint(game.snapshot());
   requestAnimationFrame(frame);

@@ -11,6 +11,7 @@ import {
   BACK,
   fightSpots,
   freeSpot,
+  grantClock,
   mapView,
   onIsland,
   roamPace,
@@ -70,6 +71,7 @@ export function createRoam(game) {
     islandIndex: 0,
     islandName: ISLANDS[0].name,
     timeLeft: RUN_SECONDS,
+    timeFlash: 0,
     zone: ISLANDS[0].id,
     x: 0,
     z: -6,
@@ -182,11 +184,13 @@ export function createRoam(game) {
         exits: view.exits,
         fights: this.fights.filter((f) => !f.resolved && near(f.x, f.z)).map((f) => ({ x: f.x, z: f.z })),
         bonuses: (world?.bonuses || []).filter((coin) => !coin.taken && near(coin.x, coin.z)).map((coin) => ({ x: coin.x, z: coin.z })),
+        clocks: (world?.clocks || []).filter((clock) => !clock.taken && near(clock.x, clock.z)).map((clock) => ({ x: clock.x, z: clock.z })),
         checks: (world?.checks || []).filter((check) => near(check.x, check.z, 20)).map((check) => ({ x: check.x, z: check.z, active: check.active })),
       };
     },
 
     update(dt) {
+      this.timeFlash = Math.max(0, this.timeFlash - dt);
       if (game.state === 'roam') {
         this.timeLeft -= dt;
         if (this.timeLeft <= 0) {
@@ -218,6 +222,7 @@ export function createRoam(game) {
       this.zone = theme.id;
       this.islandName = theme.name;
       this.timeLeft = RUN_SECONDS;
+      this.timeFlash = 0;
       this.resolved = 0;
       this.islandEarned = 0;
       this.lostTokens = 0;
@@ -360,6 +365,7 @@ export function createRoam(game) {
       updateMochi(game.mochi, game.time, Math.abs(speed), grounded && !this.flipping, 0, lean, dt, false);
       this._touchFights();
       this._touchBonuses();
+      this._touchClocks();
       this._touchBoosts(grounded);
       if (this.invuln <= 0) this._touchHazards(dt, grounded);
       this._touchChecks();
@@ -397,6 +403,27 @@ export function createRoam(game) {
         this.bonus += 1;
         game._popup(new THREE.Vector3(coin.x, coin.y + 1.6, coin.z), `+${coin.value}`, 1000);
         game.audio.coin(1000);
+      }
+    },
+
+    _touchClocks() {
+      if (!world) return;
+      for (const clock of world.clocks) {
+        if (clock.taken) continue;
+        const dx = this.x - clock.x;
+        const dz = this.z - clock.z;
+        if (dx * dx + dz * dz > 1.25 * 1.25) continue;
+        const onPad = Math.abs(this.y - clock.y) < 1.35;
+        const inAir = Math.abs(this.y - clock.hover) < 1.15;
+        if (!onPad && !inAir) continue;
+        const grant = grantClock(this.timeLeft, clock);
+        if (!grant.gained) continue;
+        clock.taken = true;
+        clock.mesh.visible = false;
+        this.timeLeft = grant.timeLeft;
+        this.timeFlash = 1.15;
+        game._popup(new THREE.Vector3(clock.x, clock.y + 1.8, clock.z), grant.label, 5000);
+        game.audio.clock();
       }
     },
 
@@ -655,6 +682,23 @@ export function createRoam(game) {
         if (coin.taken) continue;
         coin.mesh.rotation.y += dt * 2.6;
         coin.mesh.position.y = coin.hover + Math.sin(game.time * 2.2 + coin.x) * 0.12;
+      }
+      for (const clock of world.clocks || []) {
+        if (clock.taken) continue;
+        clock.mesh.rotation.y += dt * 1.7;
+        clock.mesh.position.y = clock.hover + Math.sin(game.time * 2.4 + clock.z) * 0.16;
+        if (clock.glow) clock.glow.material.opacity = 0.55 + Math.abs(Math.sin(game.time * 4.5)) * 0.4;
+      }
+      for (const nerd of world.nerds || []) {
+        const t = game.time * 8.5 + nerd.phase;
+        const tap = Math.sin(t);
+        nerd.armL.rotation.x = nerd.armBase + Math.max(0, tap) * 0.42;
+        nerd.armR.rotation.x = nerd.armBase + Math.max(0, -tap) * 0.42;
+        nerd.handL.rotation.x = tap * 0.5;
+        nerd.handR.rotation.x = -tap * 0.5;
+        nerd.head.position.y = nerd.headBase + Math.sin(t * 0.45) * 0.018;
+        nerd.head.rotation.x = Math.sin(t * 0.33) * 0.07;
+        if (nerd.screen) nerd.screen.material.emissiveIntensity = 0.7 + Math.abs(Math.sin(t * 0.5)) * 0.6;
       }
       const leds = world.leds;
       if (leds) {

@@ -233,6 +233,44 @@ export class Game {
     this.mochi.root.visible = true;
   }
 
+  toTitle() {
+    if (this.phase === 2) {
+      this.phase = 1;
+      this.roam.leave();
+      for (const tile of this.tiles) tile.visible = true;
+      for (const streak of this.streaks) streak.visible = true;
+      this.scene.fog.color.setHex(0x1a56d6);
+      this.scene.fog.near = 200;
+      this.scene.fog.far = 460;
+      this.camera.far = 500;
+      if (this.hemi) this.hemi.color.setHex(0x6eb6ff);
+      if (this.sunLight) this.sunLight.color.setHex(0xffc98a);
+      this.camera.fov = 50;
+      this.camera.updateProjectionMatrix();
+    }
+    this._removeRobot();
+    this._maskNearby(false);
+    for (const e of this.entities) this.scene.remove(e.mesh);
+    this.entities = [];
+    this.popups = [];
+    this.speed = 0;
+    this.hint = '';
+    this.bannerT = 0;
+    this.duck = 0;
+    this.invuln = 0;
+    this.shake = 0;
+    this.flash = 0;
+    this.lane = 1;
+    this.x = LANES[1];
+    this.y = 0;
+    this.vy = 0;
+    this.mochi.root.rotation.set(0, 0, 0);
+    this.mochi.root.position.set(this.x, 0, 0);
+    this.mochi.root.visible = true;
+    this.audio.setTrack(0);
+    this.state = 'title';
+  }
+
   start() {
     if (this.state !== 'title') return;
     this.state = 'run';
@@ -349,6 +387,7 @@ export class Game {
 
   update(dt) {
     this.time += dt;
+    if (this.talking) return;
     this.flash = Math.max(0, this.flash - dt * 1.5);
     this.bannerT = Math.max(0, this.bannerT - dt);
     for (const p of this.popups) p.life -= dt;
@@ -455,6 +494,7 @@ export class Game {
       resolved: this.phase === 2 ? this.roam.resolved : 0,
       goal: this.phase === 2 ? this.roam.goal : 45,
       timeLeft: this.phase === 2 ? this.roam.timeLeft : 0,
+      timeFlash: this.phase === 2 ? this.roam.timeFlash : 0,
       islandName: this.phase === 2 ? this.roam.islandName : '',
       bonus: this.phase === 2 ? this.roam.bonus : 0,
       bonusTotal: this.phase === 2 ? this.roam.bonusTotal : 0,

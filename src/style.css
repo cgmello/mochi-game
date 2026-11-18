@@ -271,7 +271,7 @@ button {
   gap: 10px;
 }
 
-#start, #to-phase2, #island-continue, #phase2, #again, #island-replay, #timeup-retry {
+#start, #to-phase2, #island-continue, #phase2, #again, #island-replay, #timeup-retry, #island-menu, #timeup-menu {
   border: 0;
   font-weight: 800;
   font-size: 20px;
@@ -285,7 +285,7 @@ button {
   box-shadow: 0 8px 0 #b85d10;
 }
 
-#phase2, #again, #island-replay {
+#phase2, #again, #island-replay, #island-menu, #timeup-menu {
   background: transparent;
   color: white;
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
@@ -360,6 +360,60 @@ kbd {
 .the-end-card { text-align: center; }
 #phase[hidden], #island[hidden], #timeup[hidden] { display: none; }
 #timer.low { color: #ff5d7a; }
+#timer.bonus { color: #7dffb2; text-shadow: 0 0 14px #3dff9a; }
+.end-actions, .end-keys { margin-top: 14px; }
+.end-keys { color: #d5e4f5; font-size: 14px; }
+
+#talk {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  width: min(780px, calc(100% - 28px));
+  z-index: 30;
+  display: flex;
+  gap: 14px;
+  align-items: stretch;
+  padding: 14px;
+  background: #14081c;
+  color: #fff8ea;
+  border: 4px solid #ffd15a;
+  box-shadow: 0 0 0 4px #1a1030, 0 0 0 8px #7af6ff;
+  pointer-events: auto;
+}
+#talk[hidden] { display: none; }
+.talk-portrait {
+  flex: 0 0 74px;
+  height: 74px;
+  background: #241038;
+  border: 4px solid #ff4db2;
+  box-shadow: inset 0 0 0 3px #1a1030;
+}
+.talk-portrait svg { width: 100%; height: 100%; display: block; }
+.talk-body { flex: 1; min-width: 0; }
+#talk-text {
+  margin: 0;
+  min-height: 3.2em;
+  font-size: clamp(16px, 2vw, 20px);
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+}
+.talk-next {
+  margin: 8px 0 0;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ffd15a;
+  animation: talk-blink 0.9s steps(2) infinite;
+}
+@keyframes talk-blink { 50% { opacity: 0; } }
+@media (max-width: 720px) {
+  #talk { bottom: 88px; padding: 10px; }
+  .talk-portrait { flex-basis: 56px; height: 56px; }
+}
 
 .phase-card {
   width: min(680px, 100%);

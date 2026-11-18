@@ -96,6 +96,12 @@ export function createAudio() {
       tone(320, t, 0.12, 0.05, 'triangle');
       tone(540, t + 0.04, 0.1, 0.04, 'sine');
     },
+    clock() {
+      const t = ensure().currentTime;
+      tone(660, t, 0.08, 0.04, 'triangle');
+      tone(880, t + 0.07, 0.1, 0.04, 'sine');
+      tone(1320, t + 0.14, 0.16, 0.035, 'sine');
+    },
     coin(tier) {
       const t = ensure().currentTime;
       if (tier >= 10000) {

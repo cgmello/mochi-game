@@ -6,7 +6,10 @@ import {
   bridgeSolids,
   BACK,
   bonusSpots,
+  clockLabel,
+  clockSpots,
   fightSpots,
+  grantClock,
   freeSpot,
   roamPace,
   mapForward,
@@ -103,6 +106,29 @@ test('fights are spread across heights and only some sit in moats', () => {
   const coins = bonusSpots();
   assert.ok(coins.length >= 6 && coins.length <= 9);
   assert.ok(coins.every((coin) => coin.value === 3));
+});
+
+test('clock pickups add time once', () => {
+  const clocks = clockSpots();
+  assert.equal(clocks.length, 2);
+  const port = clocks.find((clock) => clock.island === 1);
+  const rally = clocks.find((clock) => clock.island === 2);
+  assert.equal(port.seconds, 30);
+  assert.equal(port.label, '+0:30');
+  assert.equal(rally.seconds, 60);
+  assert.equal(rally.label, '+1:00');
+  assert.equal(clockLabel(30), '+0:30');
+  assert.equal(clockLabel(60), '+1:00');
+  const first = grantClock(100, { taken: false, seconds: 30 });
+  assert.equal(first.timeLeft, 130);
+  assert.equal(first.gained, 30);
+  assert.equal(first.label, '+0:30');
+  const again = grantClock(first.timeLeft, { taken: true, seconds: 30 });
+  assert.equal(again.timeLeft, 130);
+  assert.equal(again.gained, 0);
+  const minute = grantClock(20, { taken: false, seconds: 60 });
+  assert.equal(minute.timeLeft, 80);
+  assert.equal(minute.label, '+1:00');
 });
 
 test('down walks backwards slower than forward', () => {

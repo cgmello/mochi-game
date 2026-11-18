@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { matte } from './phase2tex.js';
 import { addSetPieces } from './phase2set.js';
-import { ISLANDS, ISLAND_R, bridgeSolids, clusterCenters, fightSpots, bonusSpots, freeSpot } from './phase2layout.js';
+import { ISLANDS, ISLAND_R, bridgeSolids, clusterCenters, fightSpots, bonusSpots, clockSpots, freeSpot } from './phase2layout.js';
 
 const TRICK = [
   [12, 6.2], [14.8, 6.2], [17.6, 6.2], [20.4, 6.2], [23.2, 6.2],
@@ -24,6 +24,7 @@ export function buildCourse(tex) {
   const boosts = [];
   const pink = [];
   const orbits = [];
+  const nerds = [];
   let whale = null;
   let portal = null;
   let leds = null;
@@ -57,9 +58,10 @@ export function buildCourse(tex) {
     if (pieces.portal) portal = pieces.portal;
     solidifySetPieces(holder, solids);
     addSign(group, isle, solids);
-    dressIsland(group, solids, tex, isle);
+    dressIsland(group, solids, tex, isle, nerds);
   }
   const bonuses = addBonuses(group, solids, tex);
+  const clocks = addClocks(group, solids, tex);
   clearBridgeDeck(group);
   addCheckpoint(group, checks, solids, 0, -52, true);
   for (const isle of ISLANDS) addCheckpoint(group, checks, solids, isle.cx + 6, isle.cz - 30, false);
@@ -70,7 +72,7 @@ export function buildCourse(tex) {
   }
 
   return {
-    group, solids, pits, cables, zaps, unstables: [], bugs, checks, leds, boosts, pink, whale, orbits, portal, bonuses,
+    group, solids, pits, cables, zaps, unstables: [], bugs, checks, leds, boosts, pink, whale, orbits, portal, bonuses, clocks, nerds,
   };
 }
 
@@ -215,6 +217,7 @@ function blocked(isle, x, z) {
   if (Math.hypot(lx, lz) > isle.r - 5) return true;
   if (onDeck(x, z)) return true;
   if (fightSpots().some((spot) => Math.hypot(x - spot.x, z - spot.z) < 3.6)) return true;
+  if (clockSpots().some((spot) => Math.hypot(x - spot.x, z - spot.z) < 3.2)) return true;
   if (clusterCenters().some((spot) => Math.abs(x - spot.x) < 3.6 && z < spot.z && z > spot.z - 8)) return true;
   return false;
 }
@@ -771,12 +774,72 @@ function addBonuses(group, solids, tex) {
 }
 
 function occupied(x, z) {
-  return fightSpots().some((spot) => Math.hypot(x - spot.x, z - spot.z) < 3.4);
+  return fightSpots().some((spot) => Math.hypot(x - spot.x, z - spot.z) < 3.4)
+    || clockSpots().some((spot) => Math.hypot(x - spot.x, z - spot.z) < 3.2);
 }
 
-function dressIsland(group, solids, tex, isle) {
+function addClocks(group, solids, tex) {
+  const gold = new THREE.MeshStandardMaterial({ color: 0xffd15a, emissive: 0xffb03a, emissiveIntensity: 0.8, metalness: 0.4, roughness: 0.28 });
+  const cyan = new THREE.MeshStandardMaterial({ color: 0x7af6ff, emissive: 0x14c8e0, emissiveIntensity: 0.95, metalness: 0.3, roughness: 0.22 });
+  const clocks = [];
+  for (const spot of clockSpots()) {
+    const pedestal = new THREE.Mesh(new THREE.BoxGeometry(1.45, spot.y, 1.45), matte(tex.metal, 0xb7fff4, 0.4));
+    pedestal.position.set(spot.x, spot.y / 2, spot.z);
+    const mesh = makeClock(gold, cyan, spot.seconds);
+    mesh.position.set(spot.x, spot.y + 1.35, spot.z);
+    mesh.scale.setScalar(1.45);
+    group.add(pedestal, mesh);
+    solids.push({ x: spot.x, z: spot.z, hw: 0.72, hd: 0.72, top: spot.y });
+    const stepTop = Math.min(0.78, spot.y * 0.46);
+    const step = new THREE.Mesh(new THREE.BoxGeometry(1.15, stepTop, 1.05), matte(tex.metal, 0xffe3a1, 0.45));
+    step.position.set(spot.x, stepTop / 2, spot.z - 1.45);
+    group.add(step);
+    solids.push({ x: spot.x, z: spot.z - 1.45, hw: 0.55, hd: 0.5, top: stepTop });
+    clocks.push({ ...spot, mesh, glow: mesh.userData.glow, hover: spot.y + 1.35, taken: false });
+  }
+  return clocks;
+}
+
+function makeClock(gold, cyan, seconds) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.52, 0.18, 24), gold);
+  const face = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.34, 0.34, 0.05, 20),
+    new THREE.MeshBasicMaterial({ color: seconds >= 60 ? 0xfff3c4 : 0xe7fbff, toneMapped: false }),
+  );
+  face.position.y = 0.1;
+  const minute = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.03, 0.24), cyan);
+  minute.position.set(0, 0.15, 0.06);
+  const hour = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.03, 0.045), cyan);
+  hour.position.set(0.05, 0.15, 0);
+  const bellL = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 8), gold);
+  bellL.position.set(-0.3, 0.24, 0);
+  const bellR = bellL.clone();
+  bellR.position.x = 0.3;
+  const crown = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.028, 6, 14, Math.PI), gold);
+  crown.rotation.z = Math.PI;
+  crown.position.y = 0.26;
+  const glow = new THREE.Mesh(
+    new THREE.TorusGeometry(0.78, 0.05, 8, 28),
+    new THREE.MeshBasicMaterial({ color: 0x7af6ff, transparent: true, opacity: 0.9, toneMapped: false }),
+  );
+  glow.rotation.x = Math.PI / 2;
+  const halo = new THREE.Mesh(
+    new THREE.RingGeometry(0.64, 0.98, 28),
+    new THREE.MeshBasicMaterial({ color: 0xffd15a, transparent: true, opacity: 0.38, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
+  );
+  halo.rotation.x = -Math.PI / 2;
+  halo.position.y = -0.02;
+  g.add(body, face, minute, hour, bellL, bellR, crown, glow, halo);
+  g.userData.kind = 'clock';
+  g.userData.seconds = seconds;
+  g.userData.glow = glow;
+  return g;
+}
+
+function dressIsland(group, solids, tex, isle, nerds) {
   addSkyline(group, isle);
-  if (isle.kind === 'market') dressMarket(group, solids, tex, isle);
+  if (isle.kind === 'market') dressMarket(group, solids, tex, isle, nerds);
   else if (isle.kind === 'harbor') dressHarbor(group, solids, tex, isle);
   else dressRally(group, solids, tex, isle);
 }
@@ -806,8 +869,102 @@ function addSkyline(group, isle) {
   }
 }
 
-function dressMarket(group, solids, tex, isle) {
+function addNerd(group, x, z, index) {
+  const seated = index % 4 === 0;
+  const hoodie = index % 2 === 0;
+  const colors = [0x243056, 0x6a3cff, 0x1f8a7a, 0xd4553a, 0xff4db2];
+  const cloth = new THREE.MeshStandardMaterial({ color: colors[index % colors.length], roughness: 0.7 });
+  const skin = new THREE.MeshStandardMaterial({ color: 0xf0c7a4, roughness: 0.72 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x1a1030, roughness: 0.45, metalness: 0.2 });
+  const g = new THREE.Group();
+  g.position.set(x, seated ? 0.38 : 0, z + (seated ? 0.72 : 0.9));
+  g.rotation.y = Math.PI;
+  g.userData.kind = 'nerd';
+  if (seated) {
+    const stool = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.42, 8), dark);
+    stool.position.y = 0.16;
+    g.add(stool);
+  }
+  const legL = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.28, 3, 5), cloth);
+  const legR = legL.clone();
+  legL.position.set(-0.09, 0.42, seated ? 0.12 : 0);
+  legR.position.set(0.09, 0.42, seated ? 0.12 : 0);
+  if (seated) {
+    legL.rotation.x = 1.25;
+    legR.rotation.x = 1.25;
+  }
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.32, 4, 8), cloth);
+  torso.position.y = seated ? 0.78 : 0.92;
+  const armL = new THREE.Group();
+  const armR = new THREE.Group();
+  armL.position.set(-0.22, seated ? 0.92 : 1.05, 0.04);
+  armR.position.set(0.22, seated ? 0.92 : 1.05, 0.04);
+  const upperL = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.22, 3, 5), cloth);
+  const upperR = upperL.clone();
+  upperL.position.set(0, -0.14, 0.06);
+  upperR.position.set(0, -0.14, 0.06);
+  upperL.rotation.x = 0.9;
+  upperR.rotation.x = 0.9;
+  const handL = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), skin);
+  const handR = handL.clone();
+  handL.position.set(0, -0.28, 0.16);
+  handR.position.set(0, -0.28, 0.16);
+  armL.add(upperL, handL);
+  armR.add(upperR, handR);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), skin);
+  head.position.y = seated ? 1.12 : 1.32;
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.135, 10, 8), dark);
+  hair.scale.set(1, 0.72, 1);
+  hair.position.y = head.position.y + 0.05;
+  const glass = new THREE.MeshStandardMaterial({ color: 0x101820, roughness: 0.3, metalness: 0.4 });
+  const lensL = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.008, 6, 10), glass);
+  const lensR = lensL.clone();
+  lensL.position.set(-0.045, head.position.y - 0.01, 0.11);
+  lensR.position.set(0.045, head.position.y - 0.01, 0.11);
+  const phones = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.012, 6, 14, Math.PI), dark);
+  phones.rotation.z = Math.PI;
+  phones.position.y = head.position.y + 0.02;
+  const cupL = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.06, 8), dark);
+  const cupR = cupL.clone();
+  cupL.position.set(-0.15, head.position.y - 0.02, 0);
+  cupR.position.set(0.15, head.position.y - 0.02, 0);
+  g.add(legL, legR, torso, armL, armR, head, hair, lensL, lensR, phones, cupL, cupR);
+  if (hoodie) {
+    const hood = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), cloth);
+    hood.scale.set(1.05, 0.85, 0.7);
+    hood.position.set(0, head.position.y + 0.02, -0.04);
+    g.add(hood);
+  }
+  const laptop = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.025, 0.28), dark);
+  laptop.position.set(x - 0.15, 0.93, z + 0.12);
+  const screenMat = new THREE.MeshStandardMaterial({
+    color: 0x9dffe8, emissive: 0x39f0c8, emissiveIntensity: 0.9, roughness: 0.25,
+  });
+  const screen = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.24, 0.02), screenMat);
+  screen.position.set(x - 0.15, 1.08, z - 0.02);
+  screen.rotation.x = -0.4;
+  const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.05, 0.09, 8), new THREE.MeshStandardMaterial({ color: 0xfff4e8, roughness: 0.5 }));
+  mug.position.set(x + 0.42, 0.96, z + 0.08);
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.008, 5, 8), mug.material);
+  handle.position.set(x + 0.48, 0.96, z + 0.08);
+  handle.rotation.y = Math.PI / 2;
+  group.add(g, laptop, screen, mug, handle);
+  return {
+    armL,
+    armR,
+    handL,
+    handR,
+    head,
+    screen,
+    phase: index * 0.9,
+    armBase: 0.15,
+    headBase: head.position.y,
+  };
+}
+
+function dressMarket(group, solids, tex, isle, nerds) {
   const cloth = [0xff4db2, 0xc45cff, 0xff8ad4, 0xff5a9a];
+  let stall = 0;
   for (let row = 0; row < 3; row++) {
     for (let col = 0; col < 4; col++) {
       const x = isle.cx - 16 + col * 11;
@@ -819,8 +976,8 @@ function dressMarket(group, solids, tex, isle) {
         new THREE.BoxGeometry(3.6, 0.1, 1.8),
         new THREE.MeshStandardMaterial({ color: cloth[(row + col) % cloth.length], roughness: 0.55, emissive: cloth[(row + col) % cloth.length], emissiveIntensity: 0.25 }),
       );
-      awning.position.set(x, 1.7, z);
-      awning.rotation.x = -0.35;
+      awning.position.set(x, 2.15, z);
+      awning.rotation.x = -0.18;
       const holo = new THREE.Mesh(
         new THREE.PlaneGeometry(0.7, 1.3),
         new THREE.MeshBasicMaterial({ color: 0xb7fff4, transparent: true, opacity: 0.8, side: THREE.DoubleSide }),
@@ -828,6 +985,8 @@ function dressMarket(group, solids, tex, isle) {
       holo.position.set(x + 1.1, 1.15, z + 0.2);
       group.add(counter, awning, holo);
       solids.push({ x, z, hw: 1.6, hd: 0.65, top: 0.9 });
+      if (stall % 2 === 0) nerds.push(addNerd(group, x, z, stall));
+      stall += 1;
     }
   }
   for (const [lx, lz, label] of [[-30, 28, 'DEAL'], [24, 22, 'GEN'], [-8, -32, 'STAKE']]) {

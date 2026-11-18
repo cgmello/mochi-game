@@ -85,9 +85,10 @@
         <p id="island-body">All 45 conflicts are settled.</p>
         <p id="island-score" class="phase-score"></p>
         <div class="title-actions">
-          <button id="island-continue" type="button">Play again</button>
-          <button id="island-replay" type="button">Retry</button>
+          <button id="island-continue" type="button">Restart phase</button>
+          <button id="island-menu" type="button">Main menu</button>
         </div>
+        <p class="end-keys">Enter restarts. Esc returns to the menu.</p>
       </div>
     </div>
 
@@ -97,7 +98,11 @@
         <h2 class="the-end">THE END</h2>
         <p id="timeup-name">Time's up</p>
         <p id="timeup-score" class="phase-score"></p>
-        <button id="timeup-retry" type="button">Restart</button>
+        <div class="title-actions end-actions">
+          <button id="timeup-retry" type="button">Restart phase</button>
+          <button id="timeup-menu" type="button">Main menu</button>
+        </div>
+        <p class="end-keys">Enter restarts. Esc returns to the menu.</p>
       </div>
     </div>
 
@@ -107,6 +112,25 @@
       <button type="button" data-act="hop" id="hop" hidden aria-label="Jump">⤒</button>
       <button type="button" data-act="duck" aria-label="Duck">↓</button>
       <button type="button" data-act="jump" aria-label="Jump">↑</button>
+    </div>
+
+    <div id="talk" hidden>
+      <div class="talk-portrait" aria-hidden="true">
+        <svg viewBox="0 0 64 64">
+          <ellipse cx="18" cy="16" rx="10" ry="12" fill="#ff4db2"/>
+          <ellipse cx="46" cy="16" rx="10" ry="12" fill="#ff4db2"/>
+          <ellipse cx="18" cy="18" rx="5" ry="7" fill="#ffd0ea"/>
+          <ellipse cx="46" cy="18" rx="5" ry="7" fill="#ffd0ea"/>
+          <circle cx="32" cy="36" r="18" fill="#f4f7fb"/>
+          <circle cx="25" cy="34" r="2.4" fill="#1a1030"/>
+          <circle cx="39" cy="34" r="2.4" fill="#1a1030"/>
+          <path d="M27 42 Q32 46 37 42" fill="none" stroke="#1a1030" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="talk-body">
+        <p id="talk-text"></p>
+        <p id="talk-next" class="talk-next" hidden>Press Enter / Space to continue</p>
+      </div>
     </div>
 
     <p id="fail" hidden>This browser could not start WebGL. Try a current desktop browser.</p>

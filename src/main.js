@@ -1,6 +1,7 @@
 import './style.css';
 import { Game, STAKE, VALIDATORS } from './game/game.js';
 import { createAudio } from './game/audio.js';
+import { mapMarkerAngle } from './game/phase2layout.js';
 
 const canvas = document.getElementById('c');
 const audio = createAudio();
@@ -224,35 +225,37 @@ function drawMap(map) {
   const h = mapCanvas.height;
   const cx = w / 2;
   const cy = h / 2;
-  const scale = (w * 0.42) / map.r;
+  const scale = (w * 0.46) / (map.span || map.r || 46);
+  const ox = cx - (map.originX || 0) * scale;
+  const oy = cy + (map.originZ || 0) * scale;
+  const px = (x) => ox + x * scale;
+  const py = (z) => oy - z * scale;
   ctx.clearRect(0, 0, w, h);
   ctx.save();
   ctx.beginPath();
   ctx.arc(cx, cy, w * 0.48, 0, Math.PI * 2);
   ctx.clip();
-  ctx.fillStyle = '#16345f';
+  ctx.fillStyle = '#10243f';
   ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = '#3aaa62';
-  ctx.beginPath();
-  ctx.arc(cx, cy, map.r * scale, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(255,246,234,0.85)';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - 28 * scale);
-  ctx.lineTo(cx, cy + 28 * scale);
-  ctx.moveTo(cx - 18 * scale, cy);
-  ctx.lineTo(cx + 18 * scale, cy);
-  ctx.stroke();
+  ctx.fillStyle = '#8d6a3a';
+  for (const bridge of map.bridges || []) {
+    ctx.fillRect(px(bridge.x - bridge.hw), py(bridge.z + bridge.hd), bridge.hw * 2 * scale, bridge.hd * 2 * scale);
+  }
+  for (const isle of map.islands || [{ x: 0, z: 0, r: map.r, color: '#3aaa62' }]) {
+    ctx.fillStyle = isle.color || '#3aaa62';
+    ctx.beginPath();
+    ctx.arc(px(isle.x), py(isle.z), isle.r * scale, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.fillStyle = '#ff3358';
   for (const fight of map.fights) {
     ctx.beginPath();
-    ctx.arc(cx + fight.x * scale, cy - fight.z * scale, 4.5, 0, Math.PI * 2);
+    ctx.arc(px(fight.x), py(fight.z), 3.2, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.save();
-  ctx.translate(cx + map.x * scale, cy - map.z * scale);
-  ctx.rotate(-map.yaw);
+  ctx.translate(px(map.x), py(map.z));
+  ctx.rotate(mapMarkerAngle(map.yaw || 0));
   ctx.fillStyle = '#ffd15a';
   ctx.beginPath();
   ctx.moveTo(0, -8);
@@ -308,20 +311,17 @@ function paint(snap) {
     phaseScore.textContent = `Score ${Math.floor(snap.score).toLocaleString('en-US')}`;
   }
   if (snap.state === 'cleared') {
-    const last = snap.islandIndex >= 2;
-    islandTitle.textContent = last ? 'Three islands settled' : `${snap.islandName} complete`;
-    islandBody.textContent = last
-      ? 'Mochi cleared the market, the harbor, and the rally.'
-      : 'The next island starts with a shorter clock.';
-    islandContinue.textContent = last ? 'Play again' : 'Next island';
+    islandTitle.textContent = 'Course complete';
+    islandBody.textContent = 'All 45 conflicts across Contract Market, Oracle Port, and Rally Square are settled.';
+    islandContinue.textContent = 'Play again';
     islandScore.textContent = `${Math.floor(snap.fees)} tokens`;
   }
   if (snap.state === 'timeout') {
-    timeupName.textContent = `Time's up on ${snap.islandName}.`;
+    timeupName.textContent = "Time's up.";
     const lost = Math.floor(snap.lostTokens || 0);
     timeupScore.textContent = lost > 0
-      ? `${lost} tokens from this island are gone. ${Math.floor(snap.fees)} remain.`
-      : `${Math.floor(snap.fees)} tokens remain.`;
+      ? `${lost} tokens from this run are gone.`
+      : 'The tokens from this run are gone.';
   }
 
   const live = new Set();

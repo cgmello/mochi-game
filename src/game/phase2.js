@@ -3,8 +3,18 @@ import { updateMochi } from './actors.js';
 import { GRAVITY } from './constants.js';
 import { makePhaseTextures, matte } from './phase2tex.js';
 import { addSetPieces } from './phase2set.js';
+import { buildCourse } from './phase2world.js';
+import {
+  GOAL,
+  ISLANDS,
+  MAP,
+  RUN_SECONDS,
+  bridgeSolids,
+  fightSpots,
+  onIsland,
+  whichIsland,
+} from './phase2layout.js';
 
-const GOAL = 20;
 const ISLAND_R = 46;
 const RUN = 12.4;
 const AIR = 0.31;
@@ -14,9 +24,9 @@ const JUMP_V = 10.4;
 const BODY_R = 0.34;
 
 const THEMES = [
-  { name: 'Mercado de Contratos', time: 60, accent: 0xee8521, fog: 0xb85a28, water: false, kind: 'market' },
-  { name: 'Porto dos Oráculos', time: 45, accent: 0x3ec8d8, fog: 0x1a5688, water: true, kind: 'harbor' },
-  { name: 'Praça do Rally', time: 30, accent: 0xc45cff, fog: 0x5a2880, water: false, kind: 'rally' },
+  { name: 'Contract Market', time: 60, accent: 0xee8521, fog: 0xb85a28, water: false, kind: 'market' },
+  { name: 'Oracle Port', time: 45, accent: 0x3ec8d8, fog: 0x1a5688, water: true, kind: 'harbor' },
+  { name: 'Rally Square', time: 30, accent: 0xc45cff, fog: 0x5a2880, water: false, kind: 'rally' },
 ];
 
 const FIGHT_SPOTS = [
@@ -56,8 +66,9 @@ export function createRoam(game) {
     resolved: 0,
     goal: GOAL,
     islandIndex: 0,
-    islandName: THEMES[0].name,
-    timeLeft: THEMES[0].time,
+    islandName: ISLANDS[0].name,
+    timeLeft: RUN_SECONDS,
+    zone: ISLANDS[0].id,
     x: 0,
     z: -6,
     y: 0,
@@ -83,7 +94,7 @@ export function createRoam(game) {
     _look: new THREE.Vector3(),
 
     get theme() {
-      return THEMES[this.islandIndex];
+      return ISLANDS[this.islandIndex] || ISLANDS[0];
     },
 
     hold(action, down) {
@@ -107,21 +118,35 @@ export function createRoam(game) {
       this.flipping = false;
     },
     replay() {
+      this.fees = 0;
+      this.islandIndex = 0;
       this._boot();
     },
     continueWave() {
-      this.nextIsland();
+      this.replay();
     },
     nextIsland() {
-      if (this.islandIndex >= THEMES.length - 1) {
-        this.fees = 0;
-        this.islandIndex = 0;
-      } else this.islandIndex += 1;
-      this._boot();
+      this.replay();
     },
     goIsland(index) {
-      this.islandIndex = Math.max(0, Math.min(THEMES.length - 1, index));
-      this._boot();
+      const isle = ISLANDS[Math.max(0, Math.min(ISLANDS.length - 1, index))];
+      if (!world) {
+        this.islandIndex = isle.index;
+        this._boot();
+      }
+      this.islandIndex = isle.index;
+      this.islandName = isle.name;
+      this.zone = isle.id;
+      this.x = isle.cx;
+      this.z = isle.cz - 20;
+      this.y = 0;
+      this.vy = 0;
+      this.yaw = 0;
+      this.snapCam = true;
+      game.state = 'roam';
+      game.bannerText = isle.name;
+      game.bannerT = 2.2;
+      this._placeMochi();
     },
 
     jump() {
@@ -142,7 +167,11 @@ export function createRoam(game) {
         x: this.x,
         z: this.z,
         yaw: this.yaw,
-        r: ISLAND_R,
+        originX: MAP.originX,
+        originZ: MAP.originZ,
+        span: MAP.span,
+        islands: ISLANDS.map((isle) => ({ x: isle.cx, z: isle.cz, r: isle.r, color: isle.map })),
+        bridges: bridgeSolids().map((bridge) => ({ x: bridge.x, z: bridge.z, hw: bridge.hw, hd: bridge.hd })),
         fights: this.fights.filter((f) => !f.resolved).map((f) => ({ x: f.x, z: f.z })),
       };
     },
@@ -152,8 +181,8 @@ export function createRoam(game) {
         this.timeLeft -= dt;
         if (this.timeLeft <= 0) {
           this.timeLeft = 0;
-          this.lostTokens = this.islandEarned;
-          this.fees = Math.max(0, this.fees - this.islandEarned);
+          this.lostTokens = this.fees;
+          this.fees = 0;
           this.islandEarned = 0;
           game.state = 'timeout';
           game.audio.crack();
@@ -171,22 +200,24 @@ export function createRoam(game) {
 
     _boot() {
       this._dropWorld();
-      world = buildIsland(game.lib, TEX, this.islandIndex);
+      world = buildCourse(TEX);
       world.group.visible = true;
       game.scene.add(world.group);
-      const theme = THEMES[this.islandIndex];
+      const theme = ISLANDS[0];
+      this.islandIndex = 0;
+      this.zone = theme.id;
       this.islandName = theme.name;
-      this.timeLeft = theme.time;
+      this.timeLeft = RUN_SECONDS;
       this.resolved = 0;
       this.islandEarned = 0;
       this.lostTokens = 0;
       this.boostT = 0;
       this.goal = GOAL;
       game.scene.fog.color.setHex(0x2a4ea6);
-      game.scene.fog.near = 120;
-      game.scene.fog.far = 340;
+      game.scene.fog.near = 180;
+      game.scene.fog.far = 520;
       this.x = 0;
-      this.z = -6;
+      this.z = -52;
       this.y = 0;
       this.yaw = 0;
       this.vy = 0;
@@ -194,7 +225,7 @@ export function createRoam(game) {
       this.kz = 0;
       this.stun = 0;
       this.invuln = 1.1;
-      this.spawn = { x: 0, y: 0, z: -6 };
+      this.spawn = { x: 0, y: 0, z: -52 };
       this.trickNext = 0;
       this.trickArmed = false;
       this.flipping = false;
@@ -229,30 +260,29 @@ export function createRoam(game) {
     },
 
     _spawnFights() {
-      FIGHT_SPOTS.forEach((spot) => {
-        const fight = makeFight(spot[0], spot[2] || 0, spot[1]);
-        fight.platform = !!spot[2];
+      for (const spot of fightSpots()) {
+        const fight = makeFight(spot.x, spot.y, spot.z);
         this.fights.push(fight);
         world.group.add(fight.group);
-      });
+      }
     },
 
     _spawnPeople() {
-      const loops = [
-        [[-2.2, -20], [-2.2, 32], [2.2, 32], [2.2, -20]],
-        [[-8, 4], [8, 4], [8, 9], [-8, 9]],
-        [[16, -10], [24, 2], [16, 12], [10, 0]],
-      ];
       const kinds = [
         { hex: 0x2f8a45, dress: true, hat: 0xe6c15a },
         { hex: 0x2a5fd0, shorts: 0x7a4a2a, hat: 0 },
         { hex: 0x1f8a7a, dress: true, hat: 0xc45cff },
         { hex: 0xd4553a, shorts: 0x3a2a22, hat: 0xf2e2b8 },
       ];
-      loops.forEach((loop, li) => {
-        const count = this.islandIndex === 2 ? 5 : 3;
-        for (let n = 0; n < count; n++) {
-          const kind = kinds[(li + n + this.islandIndex) % kinds.length];
+      ISLANDS.forEach((isle) => {
+        const loop = [
+          [isle.cx - 10, isle.cz - 6],
+          [isle.cx + 10, isle.cz - 6],
+          [isle.cx + 10, isle.cz + 6],
+          [isle.cx - 10, isle.cz + 6],
+        ];
+        for (let n = 0; n < 4; n++) {
+          const kind = kinds[(isle.index + n) % kinds.length];
           const mesh = makePerson(kind);
           const path = loop.map(([x, z]) => new THREE.Vector3(x, 0, z));
           this.npcs.push({ mesh, path, seg: n % path.length, t: n * 0.27, speed: 1.05 + (n % 3) * 0.22 });
@@ -281,16 +311,10 @@ export function createRoam(game) {
       let nz = this.z + fz * speed * dt + this.kz * dt;
       for (const solid of world.solids) {
         if (solid.dead) continue;
-        if (this.y >= solid.top - 0.05) continue;
+        if (this.y >= solid.top - 0.35) continue;
         const pushed = pushOut(nx, nz, solid, BODY_R);
         nx = pushed.x;
         nz = pushed.z;
-      }
-      const rad = Math.hypot(nx, nz);
-      const limit = ISLAND_R - 1.5;
-      if (rad > limit) {
-        nx *= limit / rad;
-        nz *= limit / rad;
       }
       this.x = nx;
       this.z = nz;
@@ -298,7 +322,7 @@ export function createRoam(game) {
       const prevY = this.y;
       this.vy += GRAVITY * dt;
       this.y += this.vy * dt;
-      let support = this._pitAt(this.x, this.z) ? -8 : 0;
+      let support = onIsland(this.x, this.z) && !this._pitAt(this.x, this.z) ? 0 : -8;
       for (const solid of world.solids) {
         if (solid.dead) continue;
         if (!inside(this.x, this.z, solid, 0.16)) continue;
@@ -324,6 +348,15 @@ export function createRoam(game) {
       this._touchBoosts(grounded);
       if (this.invuln <= 0) this._touchHazards(dt, grounded);
       this._touchChecks();
+      const isle = whichIsland(this.x, this.z);
+      if (isle && isle.id !== this.zone) {
+        this.zone = isle.id;
+        this.islandIndex = isle.index;
+        this.islandName = isle.name;
+        game.bannerText = isle.name;
+        game.bannerT = 2.2;
+        game.audio.setTrack(Math.min(4, 2 + isle.index));
+      }
     },
 
     _pitAt(x, z) {
@@ -368,7 +401,7 @@ export function createRoam(game) {
         if (fight.resolved) continue;
         const dx = this.x - fight.x;
         const dz = this.z - fight.z;
-        if (dx * dx + dz * dz > 2.05 * 2.05) continue;
+        if (dx * dx + dz * dz > 1.15 * 1.15) continue;
         if (Math.abs(this.y - fight.y) > 1.15) continue;
         this._resolve(fight);
         return;
@@ -507,15 +540,10 @@ export function createRoam(game) {
 
     _updateFights(dt) {
       for (const fight of this.fights) {
-        writeArc(fight.bolt, fight.a.position, fight.b.position, game.time + fight.x);
+        writeHeadBolt(fight.bolt, fight.a.position, fight.b.position, game.time + fight.x, 1);
+        writeHeadBolt(fight.boltB, fight.a.position, fight.b.position, game.time + fight.x + 1.7, -1);
         fight.bolt.visible = fight.angry;
-        fight.sparks.forEach((spark, i) => {
-          spark.visible = fight.angry;
-          const s = fight.angry ? 0.12 + Math.abs(Math.sin(game.time * 18 + i * 1.7)) * 0.16 : 0.01;
-          spark.scale.setScalar(s);
-          spark.rotation.y += dt * 6;
-          spark.rotation.z += dt * 3;
-        });
+        fight.boltB.visible = fight.angry;
         if (fight.angry) {
           fight.a.rotation.y = Math.PI / 2 + Math.sin(game.time * 6) * 0.08;
           fight.b.rotation.y = -Math.PI / 2 - Math.sin(game.time * 6) * 0.08;
@@ -590,10 +618,11 @@ export function createRoam(game) {
       for (const link of world.pink) {
         writeBolt(link.mesh, link.a, link.b, game.time * 1.4, 0);
       }
-      if (world.whale) {
-        world.whale.position.x = Math.sin(game.time * 0.22) * 10;
-        world.whale.position.y = 10.2 + Math.sin(game.time * 0.4) * 0.45;
-        world.whale.rotation.y = 0.15 + Math.sin(game.time * 0.22) * 0.2;
+      if (world.whale && world.whale.userData.home) {
+        const home = world.whale.userData.home;
+        world.whale.position.x = home.x + Math.sin(game.time * 0.22) * 4;
+        world.whale.position.y = home.y + Math.sin(game.time * 0.4) * 0.35;
+        world.whale.rotation.y = home.yaw + Math.sin(game.time * 0.22) * 0.15;
       }
       if (world.orbits) {
         for (const orbit of world.orbits) orbit.rotation.y += dt * orbit.userData.spin;
@@ -1096,9 +1125,10 @@ function makeFight(x, y, z) {
   poseArms(a, true);
   poseArms(b, false);
   group.add(a, b);
-  const bolt = makeArc();
-  group.add(bolt);
-  return { group, a, b, bolt, sparks: [], x, z, y, angry: true, resolved: false, leaving: false, leaveT: 0 };
+  const bolt = makeBolt();
+  const boltB = makeBolt();
+  group.add(bolt, boltB);
+  return { group, a, b, bolt, boltB, sparks: [], x, z, y, angry: true, resolved: false, leaving: false, leaveT: 0 };
 }
 
 function makeAgent() {
@@ -1194,6 +1224,22 @@ function makeArc() {
   const mesh = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xff2438, toneMapped: false }));
   mesh.frustumCulled = false;
   return mesh;
+}
+
+function writeHeadBolt(mesh, a, b, time, lane) {
+  const pos = mesh.geometry.attributes.position;
+  const segs = 6;
+  for (let i = 0; i <= segs; i++) {
+    const t = i / segs;
+    const jag = i === 0 || i === segs ? 0 : (i % 2 ? 0.26 : -0.22) * lane;
+    const wobble = Math.sin(time * 14 + i + lane) * 0.04;
+    const x = a.x + (b.x - a.x) * t + jag + wobble;
+    const y = 1.72 + (lane > 0 ? 0.42 : 0) + Math.sin(t * Math.PI) * 0.48 + (i % 2 ? 0.16 : -0.14);
+    const z = (a.z + b.z) * 0.5 + lane * 0.16;
+    pos.setXYZ(i * 2, x, y + 0.09, z);
+    pos.setXYZ(i * 2 + 1, x, y - 0.09, z);
+  }
+  pos.needsUpdate = true;
 }
 
 function writeArc(mesh, a, b, time) {

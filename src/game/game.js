@@ -426,7 +426,7 @@ export class Game {
       done: this.doneCount,
       fees: this.phase === 2 ? this.roam.fees : 0,
       resolved: this.phase === 2 ? this.roam.resolved : 0,
-      goal: this.phase === 2 ? this.roam.goal : 20,
+      goal: this.phase === 2 ? this.roam.goal : 45,
       timeLeft: this.phase === 2 ? this.roam.timeLeft : 0,
       islandName: this.phase === 2 ? this.roam.islandName : '',
       islandIndex: this.phase === 2 ? this.roam.islandIndex : 0,

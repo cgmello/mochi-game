@@ -66,21 +66,53 @@ function cube(parent, x, y, z, pink) {
 
 function capsule(parent, x, z, yaw) {
   const g = new THREE.Group();
-  const body = hull(new THREE.Mesh(new THREE.SphereGeometry(0.85, 16, 12), MAT.teal), 0.045);
-  body.scale.set(1.7, 0.72, 1.05);
-  const band = new THREE.Mesh(new THREE.TorusGeometry(0.78, 0.07, 8, 18), MAT.orange);
-  band.rotation.y = Math.PI / 2;
-  const pipe = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.05, 6, 14), MAT.orange);
-  pipe.position.set(0.2, 0.55, 0);
-  pipe.rotation.x = Math.PI / 2;
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.38), MAT.screen);
-  screen.position.set(0, 0.22, 0.78);
-  const footL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.28, 0.22), MAT.purple);
+  const shell = hull(new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.72, 1.45), MAT.teal), 0.045);
+  shell.position.y = 0.46;
+  const lip = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.08, 0.12), MAT.navy);
+  lip.position.set(0, 0.84, 0.62);
+  const lipB = lip.clone();
+  lipB.position.z = -0.62;
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.42), MAT.screen);
+  screen.position.set(-0.42, 0.56, 0.74);
+  g.add(shell, lip, lipB, screen);
+  for (let i = 0; i < 3; i++) {
+    const board = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.14, 0.55), i % 2 ? MAT.pink : MAT.purple);
+    board.position.set(0.28 + i * 0.26, 0.62, 0.02);
+    const trace = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.02, 0.4), MAT.orange);
+    trace.position.set(board.position.x, 0.72, 0);
+    g.add(board, trace);
+  }
+  for (let i = 0; i < 5; i++) {
+    const vent = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.035, 0.08), MAT.navy);
+    vent.position.set(-0.85 + i * 0.22, 0.22, 0.74);
+    g.add(vent);
+  }
+  const pipe = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.055, 8, 16), MAT.orange);
+  pipe.rotation.y = Math.PI / 2;
+  pipe.position.set(1.05, 0.78, 0);
+  const pipe2 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.7, 8), MAT.orange);
+  pipe2.rotation.z = Math.PI / 2;
+  pipe2.position.set(0.55, 0.98, 0.35);
+  const colors = [0xff4db2, 0xffe14a, 0x3dff9a];
+  colors.forEach((color, i) => {
+    const button = new THREE.Mesh(
+      new THREE.SphereGeometry(0.07, 8, 6),
+      new THREE.MeshBasicMaterial({ color, toneMapped: false }),
+    );
+    button.position.set(-0.7 + i * 0.22, 0.36, 0.76);
+    g.add(button);
+  });
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.035, 6, 12), MAT.purple);
+  handle.rotation.y = Math.PI / 2;
+  handle.position.set(-1.28, 0.62, 0);
+  const handleR = handle.clone();
+  handleR.position.x = 1.28;
+  const footL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.22), MAT.purple);
+  footL.position.set(-0.8, 0.08, 0.42);
   const footR = footL.clone();
-  footL.position.set(-0.55, -0.7, 0);
-  footR.position.set(0.55, -0.7, 0);
-  g.add(body, band, pipe, screen, footL, footR);
-  g.position.set(x, 0.95, z);
+  footR.position.x = 0.85;
+  g.add(pipe, pipe2, handle, handleR, footL, footR);
+  g.position.set(x, 0, z);
   g.rotation.y = yaw;
   g.userData.kind = 'capsule';
   parent.add(g);
@@ -88,33 +120,55 @@ function capsule(parent, x, z, yaw) {
 
 function whale(parent) {
   const g = new THREE.Group();
-  const body = hull(new THREE.Mesh(new THREE.SphereGeometry(1, 18, 12), MAT.teal), 0.04);
-  body.scale.set(3.2, 1.35, 1.65);
-  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.72, 12, 8), MAT.purple);
-  belly.scale.set(2.4, 0.55, 1.05);
-  belly.position.y = -0.35;
-  const bandA = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.28, 0.7), MAT.orange);
-  bandA.position.set(0.7, 1.15, 0.55);
-  const bandB = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.24, 0.55), MAT.pink);
-  bandB.position.set(-0.8, 1.05, -0.6);
-  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.9, 0.15), MAT.orange);
-  tail.position.set(-3.15, 0.45, 0);
-  tail.rotation.z = 0.5;
-  const tail2 = tail.clone();
-  tail2.position.y = -0.35;
-  tail2.rotation.z = -0.5;
-  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.12, 0.45), MAT.cyan);
-  fin.position.set(-0.4, -0.15, 1.15);
+  const spine = [
+    { x: 2.35, s: 0.62, mat: MAT.teal },
+    { x: 1.2, s: 0.92, mat: MAT.cyan },
+    { x: 0, s: 1.12, mat: MAT.teal },
+    { x: -1.25, s: 0.86, mat: MAT.teal },
+    { x: -2.3, s: 0.55, mat: MAT.purple },
+  ];
+  spine.forEach((seg, i) => {
+    const body = hull(new THREE.Mesh(new THREE.SphereGeometry(seg.s, 14, 10), seg.mat), 0.04);
+    body.scale.set(1.35, 0.62, 0.7);
+    body.position.x = seg.x;
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(seg.s * 0.7, 0.08, seg.s * 0.9), i % 2 ? MAT.orange : MAT.pink);
+    plate.position.set(seg.x, seg.s * 0.48, 0);
+    const side = new THREE.Mesh(new THREE.BoxGeometry(seg.s * 0.55, seg.s * 0.36, 0.08), MAT.navy);
+    side.position.set(seg.x, 0.02, seg.s * 0.62);
+    const side2 = side.clone();
+    side2.position.z = -seg.s * 0.62;
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.08, seg.s * 0.5, seg.s * 0.2), MAT.orange);
+    stripe.position.set(seg.x + seg.s * 0.2, 0.1, seg.s * 0.5);
+    g.add(body, plate, side, side2, stripe);
+  });
+  const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.18, 0.7, 7), MAT.navy);
+  stalk.rotation.z = Math.PI / 2;
+  stalk.position.set(-3.05, 0.02, 0);
+  const flukeU = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.08, 1.15), MAT.orange);
+  flukeU.position.set(-3.45, 0.35, 0.15);
+  flukeU.rotation.x = -0.55;
+  const flukeD = flukeU.clone();
+  flukeD.position.y = -0.28;
+  flukeD.rotation.x = 0.55;
+  const fin = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.07, 0.55), MAT.pink);
+  fin.position.set(0.4, -0.55, 0.95);
   fin.rotation.x = 0.4;
+  fin.rotation.z = 0.25;
   const fin2 = fin.clone();
-  fin2.position.z = -1.15;
+  fin2.position.z = -0.95;
   fin2.rotation.x = -0.4;
-  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), MAT.screen);
-  eye.position.set(2.6, 0.35, 0.7);
-  const panel = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.35, 0.08), MAT.orange);
-  panel.position.set(0.4, 0.55, 1.15);
-  g.add(body, belly, bandA, bandB, tail, tail2, fin, fin2, eye, panel);
-  g.position.set(6, 10.5, 4);
+  const dorsal = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.85, 5), MAT.purple);
+  dorsal.position.set(-0.35, 0.72, 0);
+  const eye = new THREE.Mesh(
+    new THREE.SphereGeometry(0.16, 10, 8),
+    new THREE.MeshBasicMaterial({ color: 0xb8fff0, toneMapped: false }),
+  );
+  eye.position.set(2.85, 0.28, 0.42);
+  const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), MAT.navy);
+  pupil.position.set(2.98, 0.28, 0.48);
+  g.add(stalk, flukeU, flukeD, fin, fin2, dorsal, eye, pupil);
+  g.position.set(4, 13.5, -6);
+  g.scale.setScalar(1.55);
   g.userData.kind = 'whale';
   parent.add(g);
   return g;
@@ -172,7 +226,7 @@ function portal(parent) {
     new THREE.MeshBasicMaterial({ color: 0x07041a }),
   );
   g.add(mouth);
-  g.position.set(0, 2.5, 32.5);
+  g.position.set(0, 3.4, 48);
   g.userData.kind = 'portal';
   parent.add(g);
   return g;
@@ -195,7 +249,7 @@ function hand(parent) {
   thumb.position.set(0.85, 1.85, 0.15);
   thumb.rotation.z = -0.8;
   g.add(thumb);
-  g.position.set(9.5, 0, 11);
+  g.position.set(40, 0, -20);
   g.rotation.y = -0.6;
   g.scale.setScalar(1.7);
   g.userData.kind = 'hand';
@@ -209,7 +263,7 @@ function skyline(parent) {
     const ang = (i / 16) * Math.PI * 2;
     const h = 7 + (i % 5) * 3.2;
     const tower = new THREE.Mesh(new THREE.BoxGeometry(2.2, h, 2.2), colors[i % colors.length]);
-    tower.position.set(Math.cos(ang) * 74, h / 2 - 2, Math.sin(ang) * 74);
+    tower.position.set(Math.cos(ang) * 92, h / 2 - 2, Math.sin(ang) * 92);
     g.add(tower);
     if (i % 3 === 0) {
       const dome = new THREE.Mesh(new THREE.SphereGeometry(1.15, 10, 8), MAT.cyan);
@@ -252,33 +306,36 @@ export function addSetPieces(group, theme) {
   let portalMesh = null;
   if (theme.kind === 'market') {
     const pairs = [
-      [[-14, 6.2, 2], [-11.6, 7.4, 4.2]],
-      [[12, 5.4, 16], [14.4, 6.6, 14.2]],
-      [[-6, 8.2, 22], [-3.4, 7.1, 24]],
+      [[-28, 9.2, -8], [-25.4, 10.6, -6]],
+      [[22, 8.4, 8], [24.6, 9.8, 6.2]],
+      [[-8, 11.2, 40], [-5.4, 10.1, 42]],
     ];
     for (const pair of pairs) {
       const cubes = pair.map(([x, y, z], i) => cube(group, x, y, z, i === 0));
       bolts.push(link(group, cubes[0], cubes[1]));
     }
-    cube(group, 8, 4.8, -14, true);
-    capsule(group, -8, -4, 0.4);
-    capsule(group, 7.5, 8, -0.6);
-    capsule(group, -6, 18, 0.2);
+    cube(group, 36, 7.2, -30, true);
+    capsule(group, -34, -8, 0.5);
+    capsule(group, 10, -44, -0.4);
+    capsule(group, -12, 44, 0.2);
+    capsule(group, 42, 6, 1.1);
   } else if (theme.kind === 'harbor') {
     whaleMesh = whale(group);
-    orbits.push(satellite(group, 16, 9.5, 0.18));
-    orbits.push(satellite(group, 22, 12, -0.12));
-    telescope(group, -20, 6);
-    telescope(group, 24, 10);
-    telescope(group, -8, 22);
+    orbits.push(satellite(group, 18, 11, 0.18));
+    orbits.push(satellite(group, 28, 15, -0.12));
+    telescope(group, -40, 28);
+    telescope(group, 42, -22);
+    telescope(group, 6, 46);
+    capsule(group, -30, -36, 0.3);
   } else {
     portalMesh = portal(group);
     hand(group);
     skyline(group);
-    dataTower(group, -16, 26);
-    dataTower(group, 15, 28);
-    cube(group, -6, 5.5, 20, false);
-    cube(group, 5, 4.6, 18, true);
+    dataTower(group, -42, 34);
+    dataTower(group, 44, -32);
+    cube(group, -28, 8.5, 8, false);
+    cube(group, 24, 7.2, -40, true);
+    capsule(group, -36, -8, 0.8);
   }
   return { bolts, whale: whaleMesh, orbits, portal: portalMesh };
 }

@@ -224,10 +224,89 @@ function paintAwning() {
   return texOf(c, 1, 1);
 }
 
+function paintPinkFloor() {
+  const c = canvas(256, 256);
+  const g = c.getContext('2d');
+  g.fillStyle = '#6d5a78';
+  g.fillRect(0, 0, 256, 256);
+  const n = 4;
+  const s = 256 / n;
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      g.fillStyle = (x + y) % 2 ? '#f4e7f8' : '#d7c4e4';
+      g.fillRect(x * s + 3, y * s + 3, s - 6, s - 6);
+      g.fillStyle = '#5a4568';
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          g.beginPath();
+          g.arc(x * s + 18 + i * 14, y * s + 18 + j * 14, 2, 0, Math.PI * 2);
+          g.fill();
+        }
+      }
+      g.strokeStyle = '#ff4db2';
+      g.lineWidth = 4;
+      g.strokeRect(x * s + 8, y * s + 8, s - 16, s - 16);
+    }
+  }
+  return texOf(c, 1, 1);
+}
+
+function paintGrate() {
+  const c = canvas(256, 256);
+  const g = c.getContext('2d');
+  g.fillStyle = '#8ea0ae';
+  g.fillRect(0, 0, 256, 256);
+  g.strokeStyle = '#1c3c48';
+  g.lineWidth = 3;
+  for (let i = 0; i <= 16; i++) {
+    g.beginPath();
+    g.moveTo(i * 16, 0);
+    g.lineTo(i * 16, 256);
+    g.moveTo(0, i * 16);
+    g.lineTo(256, i * 16);
+    g.stroke();
+  }
+  g.strokeStyle = '#3ce7ff';
+  g.lineWidth = 5;
+  g.strokeRect(6, 6, 244, 244);
+  return texOf(c, 1, 1);
+}
+
+function paintPcb() {
+  const c = canvas(256, 256);
+  const g = c.getContext('2d');
+  g.fillStyle = '#1a2744';
+  g.fillRect(0, 0, 256, 256);
+  g.strokeStyle = '#e2b15a';
+  g.lineWidth = 3;
+  g.beginPath();
+  for (let i = 0; i < 14; i++) {
+    const y = 16 + i * 16;
+    g.moveTo(8, y);
+    g.lineTo(40 + (i % 3) * 30, y);
+    g.lineTo(40 + (i % 3) * 30, y + 10);
+    g.lineTo(220, y + 10);
+  }
+  g.stroke();
+  g.fillStyle = '#ffb15a';
+  for (let i = 0; i < 18; i++) {
+    g.beginPath();
+    g.arc(30 + (i * 37) % 200, 24 + (i * 53) % 200, 5, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.strokeStyle = '#ff8a1a';
+  g.lineWidth = 4;
+  g.strokeRect(8, 8, 240, 240);
+  return texOf(c, 1, 1);
+}
+
 export function makePhaseTextures() {
   return {
     grass: paintGrass(),
     stone: paintStone(),
+    pink: paintPinkFloor(),
+    grate: paintGrate(),
+    pcb: paintPcb(),
     facade: paintFacade(),
     rack: paintRack(),
     mountain: paintMountain(),

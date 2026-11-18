@@ -2,7 +2,7 @@
 
 Protótipo jogável da **Fase 1** e da **Fase 2**. A Mochi, mascote da GenLayer, corre por um mundo de computadores, cabos e satélites para reunir **5 validadores**. Cada validador exige um stake de **42.000 GEN**.
 
-Quando os cinco estão completos, a Mochi vira a Adjudicator of the Internet e a **Fase 2** abre três ilhas, com a câmera atrás e acima. O chão tem grama e lajotas, e o cenário é cheio de racks, monitores, cabos, antenas e cubos de circuito. Pessoas com roupa texturizada andam pelas ruas. Robôs prateados discutem, com raios vermelhos e faíscas entre eles. O botão **Fase 2** na abertura entra direto na primeira ilha.
+Quando os cinco estão completos, a Mochi vira a Adjudicator of the Internet e a **Fase 2** abre um percurso só: Contract Market, Oracle Port e Rally Square, ligados por pontes, com a câmera atrás e acima. Cada ilha tem cor e piso próprios. Robôs prateados discutem sob dois raios vermelhos. O botão **Phase 2** na abertura entra direto em Contract Market.
 
 Geometria 3D procedural em Three.js. Código original, sem assets pagos.
 
@@ -50,9 +50,9 @@ W, A, S, D e espaço repetem pulo e troca de faixa.
 | Seta esquerda / direita | Virar |
 | Espaço | Pular, inclusive de servidor em servidor |
 
-W, A e D repetem correr e virar. O minimapa mostra a Mochi e as brigas. Cada briga resolvida vale **1 token**. São **20 brigas** por ilha: **Mercado de Contratos** (60 s, cubos de circuito e cápsulas), **Porto dos Oráculos** (45 s, baleia, satélites e telescópios) e **Praça do Rally** (30 s, portal, mão robótica e horizonte de cidade). O chão das ruas é um piso elevado de sala de servidores. Faixas com setas dão cerca de 3 segundos de impulso.
+W, A e D repetem correr e virar. O minimapa mostra as três ilhas, as pontes e para onde a Mochi está olhando. Cada briga resolvida vale **1 token**. São **45 brigas** numa corrida só, cerca de 15 em cada ilha, com **5 minutos** no relógio: **Contract Market** (piso rosa de sala de servidores), **Oracle Port** (grade e água) e **Rally Square** (placa de circuito dourada). Pontes com guarda-corpo ligam as ilhas. Faixas com setas dão cerca de 3 segundos de impulso.
 
-Se o tempo acaba, a tela **THE END** aparece, os tokens ganhos naquela ilha se perdem e a ilha recomeça. Buracos têm borda de alerta e um vão estreito ou uma ponte. Cair custa 1 token e a Mochi volta ao último **checkpoint**. Uma fileira de servidores, pulada em sequência até o último, faz a Mochi dar cambalhotas no ar.
+Se o tempo acaba, a tela **THE END** aparece, os tokens da corrida se perdem e o percurso recomeça. Vencer é juntar os 45. Buracos em volta dos agentes têm borda de alerta e um vão ou uma ponte. Cair custa 1 token e a Mochi volta ao último **checkpoint**. Uma fileira de servidores, pulada em sequência até o último, faz a Mochi dar cambalhotas no ar.
 
 ## Regras
 

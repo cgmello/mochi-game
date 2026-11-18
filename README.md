@@ -15,7 +15,7 @@ npm install
 npm run dev
 ```
 
-Abra o endereço que o Vite mostrar. O servidor local usa a porta **47321**, por exemplo `http://127.0.0.1:47321`.
+Abra o endereço que o Vite mostrar. O servidor local usa a porta **47321** e a base `/mochi-game/`, por exemplo `http://127.0.0.1:47321/mochi-game/`. A versão publicada fica em `https://cgmello.github.io/mochi-game/`.
 
 Build de produção:
 

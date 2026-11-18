@@ -72,6 +72,7 @@ try {
 }
 
 window.__game = game;
+document.querySelector('.talk-portrait').src = `${import.meta.env.BASE_URL}mochi-portrait.png`;
 
 const held = new Set();
 const popupNodes = new Map();

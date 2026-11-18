@@ -271,7 +271,7 @@ export function makeBackdropTexture() {
     paint(img);
     tex.userData.photo = true;
   };
-  img.src = '/mockup.jpg';
+  img.src = `${import.meta.env.BASE_URL}mockup.jpg`;
   return tex;
 }
 

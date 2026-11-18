@@ -413,10 +413,11 @@ export function makePlatform(lib, opts = {}) {
   return { mesh: g, height, length, ramp, width, blinkers };
 }
 
-export function makeBoostPad(lib) {
+export function makeBoostPad(lib, span = 1) {
+  const lanes = span === 3 ? 3 : span === 2 ? 2 : 1;
+  const width = lanes === 1 ? 1.9 : lanes === 2 ? 4.15 : 6.7;
   const g = new THREE.Group();
-  const length = 5.4;
-  const width = 7.1;
+  const length = 5.2;
   const belt = new THREE.Mesh(
     new THREE.BoxGeometry(width, 0.08, length),
     new THREE.MeshStandardMaterial({
@@ -429,28 +430,30 @@ export function makeBoostPad(lib) {
   );
   belt.position.y = 0.06;
   const edge = new THREE.Mesh(
-    new THREE.BoxGeometry(width + 0.12, 0.04, length + 0.12),
+    new THREE.BoxGeometry(width + 0.1, 0.04, length + 0.1),
     new THREE.MeshStandardMaterial({ color: 0xee8521, emissive: 0xee8521, emissiveIntensity: 0.35, roughness: 0.4 }),
   );
   edge.position.y = 0.03;
   g.add(edge, belt);
   const arrows = [];
-  for (let col = 0; col < 3; col++) {
+  const gap = lanes === 1 ? 0 : 2.05;
+  for (let col = 0; col < lanes; col++) {
+    const x = (col - (lanes - 1) / 2) * gap;
     for (let i = 0; i < 4; i++) {
       const arrow = new THREE.Mesh(
         lib.mark,
         new THREE.MeshBasicMaterial({ color: i % 2 ? 0xffb15a : 0x7af6ff, side: THREE.DoubleSide }),
       );
       arrow.rotation.x = Math.PI / 2;
-      arrow.position.set((col - 1) * 2.2, 0.12, -length / 2 + 0.7 + i * 1.25);
-      arrow.scale.setScalar(0.42);
+      arrow.position.set(x, 0.12, -length / 2 + 0.7 + i * 1.15);
+      arrow.scale.setScalar(lanes === 1 ? 0.34 : 0.4);
       g.add(arrow);
       arrows.push(arrow);
     }
   }
   g.userData.arrows = arrows;
   g.userData.beltLen = length;
-  return { mesh: g, length };
+  return { mesh: g, length, width, lanes };
 }
 
 function makeCloud(tint, opacity) {
@@ -475,11 +478,29 @@ export function buildAtmosphere(lib, camera) {
   sky.renderOrder = -2;
   rig.add(sky);
 
+  const sunMat = new THREE.MeshBasicMaterial({ color: 0xff8a1a, fog: false, toneMapped: false });
+  const sun = new THREE.Mesh(new THREE.SphereGeometry(6.4, 28, 18), sunMat);
+  sun.position.set(0.5, 16, -108);
+  sun.frustumCulled = false;
+  const sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: lib.glow,
+    color: 0xff7a12,
+    transparent: true,
+    opacity: 0.72,
+    depthWrite: false,
+    fog: false,
+    toneMapped: false,
+  }));
+  sunGlow.scale.set(22, 22, 1);
+  sunGlow.position.copy(sun.position);
+  sunGlow.frustumCulled = false;
+  rig.add(sun, sunGlow);
+
   const cloudSpots = [
-    [-34, 22, -90, 2.2, 0xfff7fb, 0.22],
-    [32, 20, -96, 1.9, 0xf4f7ff, 0.2],
-    [-18, 30, -120, 1.5, 0xf6ecff, 0.16],
-    [22, 32, -118, 1.6, 0xfffdf8, 0.16],
+    [-34, 24, -96, 2.0, 0xfff7fb, 0.2],
+    [34, 22, -102, 1.7, 0xf4f7ff, 0.18],
+    [-16, 32, -128, 1.4, 0xf6ecff, 0.14],
+    [20, 30, -124, 1.5, 0xfffdf8, 0.14],
   ];
   for (const [x, y, z, s, tint, opacity] of cloudSpots) {
     const cloud = makeCloud(tint, opacity);
@@ -524,7 +545,54 @@ export function buildAtmosphere(lib, camera) {
     bolts.push({ line, timer: i * 0.35, life: 0, a: anchors[i % anchors.length], b: anchors[(i + 3) % anchors.length] });
   }
 
+  const islands = [
+    [-16, 5.4, -62, 2.7, 1],
+    [15, 4.6, -70, 2.2, 2],
+    [-2, 8.2, -98, 3.4, 3],
+    [24, 9.5, -88, 1.5, 4],
+    [-26, 8.8, -84, 1.6, 5],
+  ];
+  for (const [x, y, z, s, seed] of islands) {
+    const island = makeFloatingIsland(lib, seed);
+    island.position.set(x, y, z);
+    island.scale.setScalar(s);
+    rig.add(island);
+  }
+
   return { rig, decor, bolts };
+}
+
+function makeFloatingIsland(lib, seed) {
+  const g = new THREE.Group();
+  const topMat = lib.island.clone();
+  topMat.fog = false;
+  const rockMat = lib.islandRock.clone();
+  rockMat.fog = false;
+  const teal = lib.cityA.clone();
+  teal.fog = false;
+  const purple = lib.cityB.clone();
+  purple.fog = false;
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(1.55, 1.25, 0.26, 8), topMat);
+  top.position.y = 0.08;
+  const rock = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 0.28, 0.72, 7), rockMat);
+  rock.position.y = -0.32;
+  g.add(top, rock);
+  const count = 4 + (seed % 3);
+  for (let i = 0; i < count; i++) {
+    const h = 0.55 + ((seed * 5 + i * 7) % 6) * 0.16;
+    const tower = new THREE.Mesh(new THREE.BoxGeometry(0.22, h, 0.22), i % 2 ? purple : teal);
+    const ang = (i / count) * Math.PI * 2 + seed;
+    const r = 0.28 + (i % 3) * 0.26;
+    tower.position.set(Math.cos(ang) * r, 0.2 + h / 2, Math.sin(ang) * r * 0.72);
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(0.1, h * 0.45), lib.cyanDot);
+    win.position.set(0, 0, 0.12);
+    tower.add(win);
+    g.add(tower);
+  }
+  const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.07, 1.15, 6), teal);
+  spire.position.y = 1.35;
+  g.add(spire);
+  return g;
 }
 
 function skyMaterial() {

@@ -1,17 +1,35 @@
+const TRACKS = [
+  { step: 0.36, notes: [262, 330, 392, 330], bass: 98, hat: false, fifth: false },
+  { step: 0.3, notes: [294, 370, 440, 370, 494], bass: 110, hat: false, fifth: true },
+  { step: 0.24, notes: [330, 415, 494, 415, 554, 494], bass: 131, hat: true, fifth: true },
+  { step: 0.19, notes: [349, 440, 523, 440, 587, 523, 659], bass: 147, hat: true, fifth: true },
+  { step: 0.15, notes: [392, 494, 587, 494, 659, 587, 784, 659], bass: 165, hat: true, fifth: true },
+];
+
 export function createAudio() {
   let ctx = null;
+  let master = null;
+  let music = null;
   let muted = false;
   let next = 0;
   let step = 0;
-  const scale = [261.63, 329.63, 392.0, 523.25, 392.0, 329.63, 293.66, 440.0];
+  let track = 0;
 
   function ensure() {
-    if (!ctx) ctx = new AudioContext();
+    if (!ctx) {
+      ctx = new AudioContext();
+      master = ctx.createGain();
+      master.gain.value = muted ? 0 : 1;
+      master.connect(ctx.destination);
+      music = ctx.createGain();
+      music.gain.value = 0.9;
+      music.connect(master);
+    }
     if (ctx.state === 'suspended') ctx.resume();
     return ctx;
   }
 
-  function tone(freq, when, dur, gain, type = 'sine') {
+  function tone(freq, when, dur, gain, type = 'sine', bus) {
     if (muted || !ctx) return;
     const o = ctx.createOscillator();
     const g = ctx.createGain();
@@ -20,7 +38,7 @@ export function createAudio() {
     g.gain.setValueAtTime(gain, when);
     g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
     o.connect(g);
-    g.connect(ctx.destination);
+    g.connect(bus || master);
     o.start(when);
     o.stop(when + dur + 0.02);
   }
@@ -40,7 +58,7 @@ export function createAudio() {
     g.gain.value = gain;
     src.connect(filter);
     filter.connect(g);
-    g.connect(ctx.destination);
+    g.connect(master);
     src.start();
   }
 
@@ -53,7 +71,25 @@ export function createAudio() {
     },
     toggle() {
       muted = !muted;
+      if (ctx && master) {
+        const t = ctx.currentTime;
+        master.gain.cancelScheduledValues(t);
+        master.gain.setValueAtTime(muted ? 0 : 1, t);
+      }
       return muted;
+    },
+    setTrack(index) {
+      const n = Math.max(0, Math.min(TRACKS.length - 1, index | 0));
+      if (n === track && ctx) return;
+      track = n;
+      step = 0;
+      if (!ctx) return;
+      const t = ctx.currentTime;
+      music.gain.cancelScheduledValues(t);
+      music.gain.setValueAtTime(Math.max(0.0001, music.gain.value), t);
+      music.gain.linearRampToValueAtTime(0.0001, t + 0.14);
+      music.gain.linearRampToValueAtTime(0.9, t + 0.42);
+      next = t + 0.16;
     },
     jump() {
       const t = ensure().currentTime;
@@ -109,15 +145,18 @@ export function createAudio() {
       });
     },
     tick() {
-      if (muted || !ctx) return;
+      if (muted || !ctx || !music) return;
+      const song = TRACKS[track];
       const t = ctx.currentTime;
       if (next === 0) next = t + 0.05;
       while (next < t + 0.08) {
-        const f = scale[step % scale.length];
-        tone(f, next, 0.16, 0.018, 'triangle');
-        if (step % 4 === 0) tone(f / 2, next, 0.2, 0.02, 'sine');
+        const f = song.notes[step % song.notes.length];
+        tone(f, next, song.step * 0.92, 0.02, 'triangle', music);
+        if (step % 4 === 0) tone(song.bass, next, song.step * 1.6, 0.028, 'sine', music);
+        if (song.fifth && step % 2 === 0) tone(f * 1.5, next, song.step * 0.7, 0.012, 'sine', music);
+        if (song.hat && step % 2 === 1) tone(1800, next, 0.03, 0.008, 'square', music);
         step += 1;
-        next += 0.2;
+        next += song.step;
       }
     },
   };

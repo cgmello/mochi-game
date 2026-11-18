@@ -44,8 +44,9 @@ W, A, S, D e espaço repetem pulo e troca de faixa.
 ## Regras
 
 - As moedas GEN valem **500**, **1.000**, **5.000** ou **10.000**. A de 10.000 fica acima dos trens de servidores: suba a rampa (ou pule na frente, se não houver rampa) e pule de novo em cima para pegá-la. Bater de frente no trem, sem pular e sem rampa, tira uma vida.
-- Faixas de esteira com setas aceleram a Mochi por cerca de 3 segundos. A velocidade base também sobe aos poucos ao longo da corrida.
-- Perder as 3 vidas quebra o stake atual: as fichas GEN estouram e caem, e o círculo do validador esvazia. Não há tremor de câmera.
+- Faixas de esteira com setas cobrem 1, 2 ou 3 pistas (quase sempre 1 ou 2). Passar por cima acelera a Mochi por cerca de 3 segundos; dá para desviar. A velocidade base também sobe aos poucos ao longo da corrida.
+- A música muda a cada validador concluído: cinco levadas, cada uma mais rápida e com mais camadas. O botão Sound corta efeitos e música.
+- Perder as 3 vidas quebra o stake atual: uma aura vermelha pulsa em volta da Mochi, as fichas GEN estouram e caem, e o círculo do validador esvazia. A câmera e a Mochi ficam firmes, sem tremor nem piscada.
 - O círculo do validador atual enche até 42.000 GEN. Ao completar, um robô validador aparece e cumprimenta a Mochi. O próximo validador começa do zero (o que passar de 42.000 entra no seguinte).
 - São **3 vidas**. Bater num obstáculo tira 1 vida e dá um instante de invulnerabilidade.
 - Ao perder as 3 vidas, o GEN do validador **atual** volta a zero. Validadores já conquistados permanecem, e as vidas enchem de novo.

@@ -453,7 +453,8 @@ export function createLibrary() {
   const ear = new THREE.MeshStandardMaterial({ color: 0xff4fa3, roughness: 0.4, metalness: 0.04, emissive: 0x5a1238, emissiveIntensity: 0.2 });
   const earIn = new THREE.MeshStandardMaterial({ color: 0xffd0e6, roughness: 0.45 });
   const tail = new THREE.MeshStandardMaterial({ color: 0x2a1814, roughness: 0.62 });
-  const arm = new THREE.MeshStandardMaterial({ color: 0x3a4150, roughness: 0.42, metalness: 0.35 });
+  const arm = new THREE.MeshStandardMaterial({ color: 0x4a5260, roughness: 0.45, metalness: 0.28 });
+  const yoke = new THREE.MeshStandardMaterial({ color: 0x8e97a6, roughness: 0.48, metalness: 0.18 });
   const glove = arm;
   const cyanDot = new THREE.MeshBasicMaterial({ color: 0x7af6ff });
   const cyan = new THREE.MeshStandardMaterial({
@@ -535,7 +536,7 @@ export function createLibrary() {
 
   return {
     gradient, gold, ground, grass, screen, cube, glow, shadow, face, mark, coin, backdrop,
-    suit, helmet, silver, ear, earIn, tail, arm, glove, cyan, cyanDot, logo,
+    suit, helmet, silver, ear, earIn, tail, arm, yoke, glove, cyan, cyanDot, logo,
     coinMat, coinGold, coinRim, coinRimGold, markMat,
     server, serverLow, rackFrame, rackFace, rackBay, rackTrim,
     cable, cableAlt, bezel, bezelDark, screenMat, cubeMat,

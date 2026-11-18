@@ -76,6 +76,8 @@ export class Game {
     this.wipeT = 0;
     this.wipeDelay = 0;
     this.boostT = 0;
+    this.auraT = 0;
+    this.quietInvuln = false;
     this.shards = [];
     this.width = 1;
     this.height = 1;
@@ -111,6 +113,20 @@ export class Game {
     this.mochi = makeMochi(this.lib);
     this.mochi.root.position.set(this.x, 0, 0);
     this.scene.add(this.mochi.root);
+    this.aura = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: this.lib.glow,
+      color: 0xff3358,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }));
+    this.aura.position.set(0, 0.72, -0.15);
+    this.aura.scale.set(1.7, 2.05, 1);
+    this.mochi.root.add(this.aura);
+    this.auraLight = new THREE.PointLight(0xff3358, 0, 3.2);
+    this.auraLight.position.set(0, 0.8, -0.25);
+    this.mochi.root.add(this.auraLight);
 
     this.shadow = new THREE.Mesh(
       new THREE.PlaneGeometry(1.3, 1.3),
@@ -219,6 +235,9 @@ export class Game {
     this.flash = 0;
     this.bannerT = 0;
     this.boostT = 0;
+    this.auraT = 0;
+    this.quietInvuln = false;
+    this.audio.setTrack(0);
     this._clearShards();
     this.hint = '';
     this.hintCounts = {};
@@ -279,6 +298,7 @@ export class Game {
       return;
     }
 
+    if (this.auraT > 0) this.auraT = Math.max(0, this.auraT - dt);
     if (this.state === 'run' || this.state === 'wipe') this._updatePlayer(dt);
     else if (this.state === 'stake') {
       this.y += (0 - this.y) * Math.min(1, dt * 8);
@@ -307,11 +327,14 @@ export class Game {
 
     this._despawn();
     this.invuln = Math.max(0, this.invuln - dt);
-    const blink = this.invuln > 0 && this.state === 'run' && Math.sin(this.time * 30) > 0;
+    if (this.invuln <= 0) this.quietInvuln = false;
+    const blink = this.invuln > 0 && this.state === 'run' && !this.quietInvuln && Math.sin(this.time * 30) > 0;
     this.mochi.root.visible = !blink;
 
     const grounded = this.y <= this.supportY + 0.06;
-    updateMochi(this.mochi, this.time, this.speed, grounded, this.duck, this.lean, dt);
+    const calm = this.state === 'wipe' || this.auraT > 0;
+    updateMochi(this.mochi, this.time, calm ? 0 : this.speed, grounded, calm ? 0 : this.duck, calm ? 0 : this.lean, dt, calm);
+    this._updateAura();
 
     if (this.state === 'stake') this._updateStake(dt);
     if (this.state === 'wipe') this._updateWipe(dt);
@@ -357,6 +380,17 @@ export class Game {
   }
 
   _updatePlayer(dt) {
+    if (this.state === 'wipe') {
+      this.vy = 0;
+      this.lean = 0;
+      this.duck = 0;
+      const target = LANES[this.lane];
+      const dx = target - this.x;
+      this.x += Math.sign(dx) * Math.min(Math.abs(dx), 13 * dt);
+      this.mochi.root.position.set(this.x, this.y, 0);
+      this.mochi.root.rotation.set(0, 0, 0);
+      return;
+    }
     if (this.duckTimer > 0) this.duckTimer -= dt;
     const onFloor = this.y <= this.supportY + 0.08;
     const wantDuck = (this.duckHeld || this.duckTimer > 0) && onFloor;
@@ -611,15 +645,25 @@ export class Game {
     });
   }
 
-  _spawnBoost(z) {
-    const made = makeBoostPad(this.lib);
-    made.mesh.position.set(0, 0, z);
+  _spawnBoost(z, span = null) {
+    const roll = Math.random();
+    const lanes = span || (roll < 0.5 ? 1 : roll < 0.86 ? 2 : 3);
+    let x = 0;
+    if (lanes === 1) x = LANES[lane()];
+    else if (lanes === 2) {
+      const start = Math.random() < 0.5 ? 0 : 1;
+      x = (LANES[start] + LANES[start + 1]) / 2;
+    }
+    const made = makeBoostPad(this.lib, lanes);
+    made.mesh.position.set(x, 0, z);
     this._add({
       kind: 'boost',
       mesh: made.mesh,
       lane: -1,
       length: made.length,
-      allLanes: true,
+      halfW: made.width * 0.5,
+      centerX: x,
+      allLanes: false,
       pulsed: false,
     });
   }
@@ -727,6 +771,7 @@ export class Game {
       }
       if (e.kind === 'boost') {
         if (Math.abs(e.mesh.position.z) > e.length * 0.5) continue;
+        if (Math.abs(this.x - e.centerX) > e.halfW) continue;
         if (this.y > this.supportY + 0.35) continue;
         this.boostT = 3;
         if (!e.pulsed) {
@@ -741,8 +786,6 @@ export class Game {
     if (this.invuln > 0 || (this.state !== 'run' && this.state !== 'wipe')) return;
     this.lives -= 1;
     this.invuln = 1.75;
-    this.flash = 0.35;
-    this.flashColor = '#ff5d7a';
     this.audio.hit();
     if (this.lives <= 0) {
       this.state = 'wipe';
@@ -752,11 +795,18 @@ export class Game {
       this.lives = 0;
       this.shake = 0;
       this.vy = 0;
+      this.lean = 0;
+      this.flash = 0;
+      this.auraT = 1.5;
+      this.quietInvuln = true;
+      this.boostT = 0;
       this.audio.crack();
       this._spawnShards();
       this.bannerText = 'Stake lost — this validator resets';
       this.bannerT = 1.8;
     } else {
+      this.flash = 0.35;
+      this.flashColor = '#ff5d7a';
       this.bannerText = `${this.lives} ${this.lives === 1 ? 'life' : 'lives'} left`;
       this.bannerT = 0.95;
     }
@@ -869,6 +919,7 @@ export class Game {
     if (this.doneCount >= VALIDATORS) {
       this.state = 'done';
       this.gen = STAKE;
+      this.audio.setTrack(this.doneCount);
       this.audio.fanfare();
       this._burst(this.x, 1.7, 0.4, 40);
       this.bannerText = '';
@@ -878,6 +929,7 @@ export class Game {
     this.gen = this.stakeOverflow;
     this.state = 'run';
     this.invuln = Math.max(this.invuln, 0.7);
+    this.audio.setTrack(this.doneCount);
   }
 
   _removeRobot() {
@@ -1021,6 +1073,19 @@ export class Game {
   }
 
   _updateCamera(dt) {
+    const calm = this.state === 'wipe' || this.auraT > 0;
+    if (calm) {
+      this.shake = 0;
+      if (Math.abs(this.camera.fov - 50) > 0.01) {
+        this.camera.fov = 50;
+        this.camera.updateProjectionMatrix();
+      }
+      this.camera.position.set(this.x * 0.9, 2.55, -5.15);
+      this.camPos.copy(this.camera.position);
+      this.lookPos.set(this.x * 0.2, 1.05, 5.5);
+      this.camera.lookAt(this.lookPos);
+      return;
+    }
     const staking = this.state === 'stake';
     const side = this.stakeSide || 1;
     const desired = this._proj;
@@ -1103,6 +1168,14 @@ export class Game {
       s.mesh.material.dispose();
       return false;
     });
+  }
+
+  _updateAura() {
+    const on = this.auraT > 0;
+    const pulse = 0.55 + 0.45 * Math.sin(this.time * 4.2);
+    this.aura.material.opacity = on ? 0.28 + 0.22 * pulse : 0;
+    this.aura.scale.set(1.65 + pulse * 0.18, 2.0 + pulse * 0.16, 1);
+    this.auraLight.intensity = on ? 0.7 + 0.55 * pulse : 0;
   }
 
   _updateStreaks(dt) {

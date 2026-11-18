@@ -15,18 +15,30 @@
     <div id="flash"></div>
 
     <div id="hud" hidden>
-      <div class="score">
+      <div class="score" id="run-score">
         <span>Score</span>
         <strong id="score">0</strong>
       </div>
-      <div class="stake">
+      <div class="stake" id="run-stake">
         <div class="vals" id="vals"></div>
         <p id="gen" class="gen">0 / 42,000 GEN</p>
         <p id="which" class="which">Validator 1 of 5</p>
       </div>
       <div class="lives" id="lives" aria-label="Lives"></div>
+      <div id="roam-hud" hidden>
+        <div class="score">
+          <span>Coins</span>
+          <strong id="fees">0</strong>
+        </div>
+        <div class="stake">
+          <p id="resolved" class="gen">0 / 10 conflicts</p>
+          <p class="which">Adjudicator</p>
+        </div>
+      </div>
       <button id="mute" type="button" aria-label="Mute sound">Sound</button>
     </div>
+
+    <div id="minimap" hidden><canvas id="map" width="168" height="168"></canvas></div>
 
     <div id="banner"></div>
     <div id="hint"></div>
@@ -38,7 +50,10 @@
         <p class="eyebrow">GenLayer · Phase 1</p>
         <h1>Mochi</h1>
         <p class="lede">Gather five validators. Each one stakes 42,000 GEN. Then Mochi becomes the Adjudicator of the Internet.</p>
-        <button id="start" type="button">Start</button>
+        <div class="title-actions">
+          <button id="start" type="button">Start</button>
+          <button id="phase2" type="button">Fase 2</button>
+        </div>
         <ul class="keys">
           <li><kbd>↑</kbd> Jump</li>
           <li><kbd>↓</kbd> Duck</li>
@@ -52,15 +67,32 @@
       <div class="phase-card">
         <p class="eyebrow">Five validators staked</p>
         <h2>Phase complete - Mochi is now the Adjudicator of the Internet</h2>
-        <p>Phase 2 — roaming the world and resolving fights between AI agents, from a wider camera — comes later.</p>
+        <p>Roam the island, settle fights between AI agents, and collect GEN fees. The camera sits farther back so the whole plaza stays in view.</p>
         <p id="phase-score" class="phase-score"></p>
-        <button id="again" type="button">Run again</button>
+        <div class="title-actions">
+          <button id="to-phase2" type="button">Fase 2</button>
+          <button id="again" type="button">Run again</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="island" hidden>
+      <div class="phase-card">
+        <p class="eyebrow">Phase 2</p>
+        <h2>Island resolved</h2>
+        <p>Every fight on this island is settled. The fees stay with Mochi.</p>
+        <p id="island-score" class="phase-score"></p>
+        <div class="title-actions">
+          <button id="island-continue" type="button">Continue</button>
+          <button id="island-replay" type="button">Replay</button>
+        </div>
       </div>
     </div>
 
     <div class="touch" id="touch">
       <button type="button" data-act="left" aria-label="Lane left">←</button>
       <button type="button" data-act="right" aria-label="Lane right">→</button>
+      <button type="button" data-act="hop" id="hop" hidden aria-label="Jump">⤒</button>
       <button type="button" data-act="duck" aria-label="Duck">↓</button>
       <button type="button" data-act="jump" aria-label="Jump">↑</button>
     </div>

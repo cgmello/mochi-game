@@ -18,6 +18,17 @@ const vals = document.getElementById('vals');
 const livesEl = document.getElementById('lives');
 const muteBtn = document.getElementById('mute');
 const phaseScore = document.getElementById('phase-score');
+const island = document.getElementById('island');
+const islandScore = document.getElementById('island-score');
+const runScore = document.getElementById('run-score');
+const runStake = document.getElementById('run-stake');
+const roamHud = document.getElementById('roam-hud');
+const feesEl = document.getElementById('fees');
+const resolvedEl = document.getElementById('resolved');
+const hopBtn = document.getElementById('hop');
+const minimap = document.getElementById('minimap');
+const mapCanvas = document.getElementById('map');
+const mapCtx = mapCanvas.getContext('2d');
 const fail = document.getElementById('fail');
 
 const CIRC = 2 * Math.PI * 15;
@@ -61,20 +72,38 @@ function begin() {
   game.start();
 }
 
+function beginPhase2() {
+  title.hidden = true;
+  game.startPhase2();
+}
+
 document.getElementById('start').addEventListener('click', begin);
-document.getElementById('again').addEventListener('click', () => game.reset());
+document.getElementById('phase2').addEventListener('click', beginPhase2);
+document.getElementById('to-phase2').addEventListener('click', () => game.startPhase2());
+document.getElementById('again').addEventListener('click', () => {
+  title.hidden = true;
+  game.reset();
+});
+document.getElementById('island-continue').addEventListener('click', () => game.roam.continueWave());
+document.getElementById('island-replay').addEventListener('click', () => game.roam.replay());
 muteBtn.addEventListener('click', () => {
   const muted = audio.toggle();
   muteBtn.textContent = muted ? 'Muted' : 'Sound';
 });
 
-window.addEventListener('keydown', (event) => {
-  if (game.state === 'title' && (event.code === 'Enter' || event.code === 'Space')) {
-    event.preventDefault();
-    begin();
-    return;
+function actionFor(code) {
+  if (game.phase === 2) {
+    return {
+      ArrowLeft: 'left',
+      ArrowRight: 'right',
+      ArrowUp: 'forward',
+      KeyA: 'left',
+      KeyD: 'right',
+      KeyW: 'forward',
+      Space: 'hop',
+    }[code];
   }
-  const action = {
+  return {
     ArrowLeft: 'left',
     ArrowRight: 'right',
     ArrowUp: 'jump',
@@ -84,16 +113,35 @@ window.addEventListener('keydown', (event) => {
     KeyW: 'jump',
     KeyS: 'duck',
     Space: 'jump',
-  }[event.code];
+  }[code];
+}
+
+window.addEventListener('keydown', (event) => {
+  if (game.state === 'title' && (event.code === 'Enter' || event.code === 'Space')) {
+    event.preventDefault();
+    begin();
+    return;
+  }
+  const action = actionFor(event.code);
   if (!action) return;
   event.preventDefault();
   if (held.has(event.code)) return;
   held.add(event.code);
+  if (game.phase === 2) {
+    if (action === 'hop') game.press('hop');
+    else game.hold(action, true);
+    return;
+  }
   game.press(action);
 });
 
 window.addEventListener('keyup', (event) => {
   held.delete(event.code);
+  if (game.phase === 2) {
+    const action = actionFor(event.code);
+    if (action && action !== 'hop') game.hold(action, false);
+    return;
+  }
   if (event.code === 'ArrowDown' || event.code === 'KeyS') game.press('duck-end');
 });
 
@@ -117,6 +165,7 @@ window.addEventListener('touchend', (event) => {
     begin();
     return;
   }
+  if (game.phase === 2) return;
   const t = event.changedTouches[0];
   const dx = t.clientX - touchX;
   const dy = t.clientY - touchY;
@@ -133,10 +182,23 @@ for (const button of document.querySelectorAll('[data-act]')) {
   const act = button.dataset.act;
   button.addEventListener('pointerdown', (event) => {
     event.preventDefault();
+    if (game.phase === 2) {
+      const roamAct = act === 'jump' ? 'forward' : act === 'left' || act === 'right' || act === 'hop' ? act : null;
+      if (!roamAct) return;
+      if (roamAct === 'hop') game.press('hop');
+      else game.hold(roamAct, true);
+      button.dataset.roam = roamAct;
+      return;
+    }
     if (game.state === 'title') begin();
     game.press(act);
   });
   const release = () => {
+    if (game.phase === 2) {
+      const roamAct = button.dataset.roam;
+      if (roamAct && roamAct !== 'hop') game.hold(roamAct, false);
+      return;
+    }
     if (act === 'duck') game.press('duck-end');
   };
   button.addEventListener('pointerup', release);
@@ -146,10 +208,70 @@ for (const button of document.querySelectorAll('[data-act]')) {
 
 window.addEventListener('resize', () => game.resize());
 
+function drawMap(map) {
+  if (!map) return;
+  const ctx = mapCtx;
+  const w = mapCanvas.width;
+  const h = mapCanvas.height;
+  const cx = w / 2;
+  const cy = h / 2;
+  const scale = (w * 0.42) / map.r;
+  ctx.clearRect(0, 0, w, h);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, w * 0.48, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = '#16345f';
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#3aaa62';
+  ctx.beginPath();
+  ctx.arc(cx, cy, map.r * scale, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,246,234,0.85)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 28 * scale);
+  ctx.lineTo(cx, cy + 28 * scale);
+  ctx.moveTo(cx - 18 * scale, cy);
+  ctx.lineTo(cx + 18 * scale, cy);
+  ctx.stroke();
+  ctx.fillStyle = '#ff3358';
+  for (const fight of map.fights) {
+    ctx.beginPath();
+    ctx.arc(cx + fight.x * scale, cy - fight.z * scale, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.save();
+  ctx.translate(cx + map.x * scale, cy - map.z * scale);
+  ctx.rotate(-map.yaw);
+  ctx.fillStyle = '#ffd15a';
+  ctx.beginPath();
+  ctx.moveTo(0, -8);
+  ctx.lineTo(5, 6);
+  ctx.lineTo(-5, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  ctx.restore();
+}
+
 function paint(snap) {
   const playing = snap.state !== 'title';
+  const phase2 = snap.phase === 2;
   hud.hidden = !playing;
   phase.hidden = snap.state !== 'done';
+  island.hidden = snap.state !== 'cleared';
+  runScore.hidden = phase2;
+  runStake.hidden = phase2;
+  livesEl.hidden = phase2;
+  roamHud.hidden = !phase2;
+  hopBtn.hidden = !phase2;
+  minimap.hidden = !phase2;
+  if (phase2) {
+    feesEl.textContent = Math.floor(snap.fees).toLocaleString('en-US');
+    resolvedEl.textContent = `${snap.resolved} / ${snap.goal} conflicts`;
+    drawMap(snap.map);
+  }
   banner.textContent = snap.banner;
   hint.textContent = snap.hint;
   flash.style.opacity = String(Math.min(0.62, snap.flash));
@@ -170,6 +292,9 @@ function paint(snap) {
   hearts.forEach((heart, i) => heart.classList.toggle('on', i < snap.lives));
   if (snap.state === 'done') {
     phaseScore.textContent = `Score ${Math.floor(snap.score).toLocaleString('en-US')}`;
+  }
+  if (snap.state === 'cleared') {
+    islandScore.textContent = `${snap.resolved} conflicts · ${Math.floor(snap.fees).toLocaleString('en-US')} GEN`;
   }
 
   const live = new Set();

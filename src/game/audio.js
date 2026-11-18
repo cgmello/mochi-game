@@ -132,6 +132,13 @@ export function createAudio() {
       tone(311, t + 0.12, 0.18, 0.05, 'triangle');
       tone(233, t + 0.24, 0.28, 0.05, 'sine');
     },
+    gavel() {
+      const t = ensure().currentTime;
+      noise(0.06, 0.1, 900);
+      tone(140, t, 0.09, 0.07, 'square');
+      tone(420, t + 0.05, 0.14, 0.045, 'triangle');
+      tone(640, t + 0.1, 0.16, 0.03, 'sine');
+    },
     stake() {
       const t = ensure().currentTime;
       [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {

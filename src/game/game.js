@@ -12,6 +12,7 @@ import {
   updateBolts,
 } from './props.js';
 import { bodyTop, obstacleHits, inLane, inDepth, platformSurface } from './collision.js';
+import { createRoam } from './phase2.js';
 import {
   STAKE,
   VALIDATORS,
@@ -78,6 +79,7 @@ export class Game {
     this.boostT = 0;
     this.auraT = 0;
     this.quietInvuln = false;
+    this.phase = 1;
     this.shards = [];
     this.width = 1;
     this.height = 1;
@@ -193,8 +195,36 @@ export class Game {
     this.ringLife = 0;
     this.scene.add(this.ring);
 
+    this.roam = createRoam(this);
     this._ensureSpawn();
     this.resize();
+  }
+
+  startPhase2() {
+    if (this.phase === 2) return;
+    this.audio.resume();
+    this._shelveRunner();
+    this.phase = 2;
+    this.roam.enter();
+  }
+
+  _shelveRunner() {
+    this._removeRobot();
+    this._maskNearby(false);
+    for (const e of this.entities) this.scene.remove(e.mesh);
+    this.entities = [];
+    this._clearShards();
+    for (const tile of this.tiles) tile.visible = false;
+    for (const streak of this.streaks) streak.visible = false;
+    this.speed = 0;
+    this.hint = '';
+    this.bannerT = 0;
+    this.duck = 0;
+    this.invuln = 0;
+    this.quietInvuln = false;
+    this.auraT = 0;
+    this.shake = 0;
+    this.mochi.root.visible = true;
   }
 
   start() {
@@ -206,6 +236,16 @@ export class Game {
   }
 
   reset() {
+    if (this.phase === 2) {
+      this.phase = 1;
+      this.roam.leave();
+      for (const tile of this.tiles) tile.visible = true;
+      for (const streak of this.streaks) streak.visible = true;
+      this.scene.fog.near = 200;
+      this.scene.fog.far = 460;
+      this.camera.fov = 50;
+      this.camera.updateProjectionMatrix();
+    }
     this._removeRobot();
     this._maskNearby(false);
     for (const e of this.entities) this.scene.remove(e.mesh);
@@ -248,7 +288,15 @@ export class Game {
     this._ensureSpawn();
   }
 
+  hold(action, down) {
+    if (this.phase === 2) this.roam.hold(action, down);
+  }
+
   press(action) {
+    if (this.phase === 2) {
+      if (action === 'hop' || action === 'jump') this.roam.jump();
+      return;
+    }
     if (this.state !== 'run' && this.state !== 'wipe') return;
     if (action === 'left' || action === 'right') this.lane = laneStep(this.lane, action);
     else if (action === 'jump') this.jumpBuffer = 0.14;
@@ -260,6 +308,7 @@ export class Game {
 
   releaseAll() {
     this.duckHeld = false;
+    if (this.roam) this.roam.release();
   }
 
   debugFill() {
@@ -270,7 +319,7 @@ export class Game {
   }
 
   debugHurt() {
-    if (this.state === 'title' || this.state === 'done') return;
+    if (this.phase === 2 || this.state === 'title' || this.state === 'done') return;
     this.state = 'run';
     this.invuln = 0;
     this._hurt();
@@ -290,6 +339,16 @@ export class Game {
     this.bannerT = Math.max(0, this.bannerT - dt);
     for (const p of this.popups) p.life -= dt;
     this.popups = this.popups.filter((p) => p.life > 0);
+
+    if (this.phase === 2) {
+      this.roam.update(dt);
+      this._updateBits(dt);
+      this._updateRing(dt);
+      this._updateDecor(dt);
+      this.audio.tick();
+      this.score = this.roam.fees;
+      return;
+    }
 
     if (this.state === 'title') {
       updateMochi(this.mochi, this.time, 0, true, 0, 0, dt);
@@ -359,10 +418,15 @@ export class Game {
   snapshot() {
     return {
       state: this.state,
+      phase: this.phase,
       score: this.score,
       gen: this.displayGen,
       lives: this.lives,
       done: this.doneCount,
+      fees: this.phase === 2 ? this.roam.fees : 0,
+      resolved: this.phase === 2 ? this.roam.resolved : 0,
+      goal: this.phase === 2 ? this.roam.goal : 10,
+      map: this.phase === 2 ? this.roam.mapSnapshot() : null,
       hint: this.hint,
       banner: this.bannerT > 0 ? this.bannerText : '',
       flash: this.flash,

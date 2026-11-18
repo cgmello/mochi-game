@@ -98,17 +98,33 @@ export function makeMochi(lib) {
   return { root, tilt, bob, upper, legL, legR, armL, armR, tail, earL, earR, head };
 }
 
+function earShape(halfW, height) {
+  const shape = new THREE.Shape();
+  shape.moveTo(-halfW, 0);
+  shape.lineTo(halfW, 0);
+  shape.lineTo(0, height);
+  shape.closePath();
+  return shape;
+}
+
 function makeEar(lib, side) {
   const g = new THREE.Group();
-  const outline = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.78, 3), lib.suit);
-  outline.scale.set(1, 1, 0.62);
-  const inner = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.6, 3), lib.ear);
-  inner.position.set(0, 0.02, -0.03);
-  inner.scale.set(1, 1, 0.7);
-  g.add(outline, inner);
-  g.position.set(side * 0.22, 0.46, -0.08);
-  g.rotation.z = side * 0.1;
-  g.rotation.x = -0.08;
+  const outerGeo = new THREE.ExtrudeGeometry(earShape(0.28, 0.62), {
+    depth: 0.1,
+    bevelEnabled: false,
+  });
+  outerGeo.translate(0, 0, -0.05);
+  const outer = new THREE.Mesh(outerGeo, lib.helmet);
+  const innerGeo = new THREE.ExtrudeGeometry(earShape(0.18, 0.42), {
+    depth: 0.03,
+    bevelEnabled: false,
+  });
+  innerGeo.translate(0, 0.08, -0.062);
+  const inner = new THREE.Mesh(innerGeo, new THREE.MeshBasicMaterial({ color: 0xe445c8 }));
+  g.add(outer, inner);
+  g.position.set(side * 0.16, 0.3, -0.06);
+  g.rotation.z = -side * 0.46;
+  g.rotation.x = -0.22;
   return g;
 }
 
@@ -204,10 +220,8 @@ export function updateMochi(m, time, speed, grounded, duck, lean, dt, still = fa
     m.tilt.rotation.y = 0;
     m.tail.rotation.y = 0;
     m.tail.rotation.z = 0;
-    m.earL.rotation.x = -0.08;
-    m.earR.rotation.x = -0.08;
-    m.earL.rotation.z = -0.1;
-    m.earR.rotation.z = 0.1;
+    m.earL.rotation.set(-0.22, 0, 0.46);
+    m.earR.rotation.set(-0.22, 0, -0.46);
     return;
   }
 
@@ -258,10 +272,9 @@ export function updateMochi(m, time, speed, grounded, duck, lean, dt, still = fa
 
   m.tail.rotation.y = Math.sin(time * 3.2) * 0.12 + s * 0.06;
   m.tail.rotation.z = 0.06 + Math.sin(pace) * 0.04;
-  m.earL.rotation.x = -0.08;
-  m.earR.rotation.x = -0.08;
-  m.earL.rotation.z = -0.1 + Math.sin(time * 3) * 0.02;
-  m.earR.rotation.z = 0.1 - Math.sin(time * 3) * 0.02;
+  const twitch = Math.sin(time * 3) * 0.02;
+  m.earL.rotation.set(-0.22, 0, 0.46 + twitch);
+  m.earR.rotation.set(-0.22, 0, -0.46 - twitch);
 }
 
 export function makeRobot(index) {

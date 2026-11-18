@@ -7,10 +7,11 @@ import {
   makeCoin,
   makeObstacle,
   makePlatform,
+  makeBoostPad,
   buildAtmosphere,
   updateBolts,
 } from './props.js';
-import { bodyTop, obstacleHits, inLane, inDepth } from './collision.js';
+import { bodyTop, obstacleHits, inLane, inDepth, platformSurface } from './collision.js';
 import {
   STAKE,
   VALIDATORS,
@@ -22,6 +23,7 @@ import {
   TILE_COUNT,
   GRAVITY,
   JUMP_V,
+  laneStep,
 } from './constants.js';
 
 export { STAKE, VALIDATORS };
@@ -73,11 +75,13 @@ export class Game {
     this.robot = null;
     this.wipeT = 0;
     this.wipeDelay = 0;
+    this.boostT = 0;
+    this.shards = [];
     this.width = 1;
     this.height = 1;
 
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.Fog(0xc9e0f2, 78, 220);
+    this.scene.fog = new THREE.Fog(0x1a56d6, 200, 460);
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 500);
     this.camPos = new THREE.Vector3(0, 4.1, -8.2);
     this.lookPos = new THREE.Vector3(0, 1.2, 8);
@@ -87,18 +91,18 @@ export class Game {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.0;
+    this.renderer.toneMapping = THREE.NoToneMapping;
+    this.renderer.toneMappingExposure = 1;
 
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-    this.scene.environmentIntensity = 0.48;
+    this.scene.environmentIntensity = 0.28;
     pmrem.dispose();
 
-    this.scene.add(new THREE.HemisphereLight(0xd7ecff, 0xf0c08a, 1.35));
-    const sun = new THREE.DirectionalLight(0xfff2d6, 2.35);
+    this.scene.add(new THREE.HemisphereLight(0x6eb6ff, 0xc46a32, 0.48));
+    const sun = new THREE.DirectionalLight(0xffc98a, 1.25);
     sun.position.set(-28, 46, 16);
-    const fill = new THREE.DirectionalLight(0xb7c4ff, 0.75);
+    const fill = new THREE.DirectionalLight(0x9eb6ff, 0.42);
     fill.position.set(18, 14, -10);
     const rim = new THREE.DirectionalLight(0x8ef6ff, 0.9);
     rim.position.set(4, 8, 22);
@@ -126,6 +130,35 @@ export class Game {
     }
 
     this.atmosphere = buildAtmosphere(this.lib, this.camera);
+    this.streaks = [];
+    for (let i = 0; i < 12; i++) {
+      const side = i < 6 ? -1 : 1;
+      const k = i % 6;
+      const streak = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.018, 0.85),
+        new THREE.MeshBasicMaterial({
+          color: i % 2 ? 0x7af6ff : 0xff9a3c,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        }),
+      );
+      streak.position.set(side * (1.25 + k * 0.18), -0.05 + (k % 3) * 0.2, -2.4 - k * 0.16);
+      streak.rotation.z = side * -0.28;
+      this.camera.add(streak);
+      this.streaks.push(streak);
+    }
+    this.trail = [];
+    for (let i = 0; i < 8; i++) {
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.07, 8, 6),
+        new THREE.MeshBasicMaterial({ color: i % 2 ? 0x7af6ff : 0xff9a3c, transparent: true, opacity: 0 }),
+      );
+      mesh.visible = false;
+      this.scene.add(mesh);
+      this.trail.push(mesh);
+    }
 
     this.bits = [];
     const bitGeo = new THREE.OctahedronGeometry(0.07, 0);
@@ -185,6 +218,8 @@ export class Game {
     this.shake = 0;
     this.flash = 0;
     this.bannerT = 0;
+    this.boostT = 0;
+    this._clearShards();
     this.hint = '';
     this.hintCounts = {};
     this.mochi.root.rotation.set(0, 0, 0);
@@ -196,8 +231,7 @@ export class Game {
 
   press(action) {
     if (this.state !== 'run' && this.state !== 'wipe') return;
-    if (action === 'left') this.lane = Math.max(0, this.lane - 1);
-    else if (action === 'right') this.lane = Math.min(2, this.lane + 1);
+    if (action === 'left' || action === 'right') this.lane = laneStep(this.lane, action);
     else if (action === 'jump') this.jumpBuffer = 0.14;
     else if (action === 'duck') {
       this.duckHeld = true;
@@ -256,6 +290,7 @@ export class Game {
       this.mochi.root.position.set(this.x, this.y, 0);
     }
 
+    if (this.boostT > 0) this.boostT = Math.max(0, this.boostT - dt);
     const moving = this.state === 'run' || this.state === 'wipe';
     const target = moving ? this._targetSpeed() * (this.state === 'wipe' ? 0.45 : 1) : 0;
     this.speed += (target - this.speed) * Math.min(1, dt * 1.4);
@@ -281,12 +316,15 @@ export class Game {
     if (this.state === 'stake') this._updateStake(dt);
     if (this.state === 'wipe') this._updateWipe(dt);
 
+    this._updateShards(dt);
     this._updateBits(dt);
+    this._updateStreaks(dt);
     this._updateRing(dt);
     this._updateShadow();
     this._updateDecor(dt);
     this._updateCamera(dt);
-    this.displayGen += (this.gen - this.displayGen) * Math.min(1, dt * 5);
+    if (this.state === 'wipe') this.displayGen = Math.max(this.gen, this.displayGen - dt * 32000);
+    else this.displayGen += (this.gen - this.displayGen) * Math.min(1, dt * 5);
     this.score = this.totalGen + Math.floor(this.distance * 2);
     if (this.state !== 'title') this.audio.tick();
   }
@@ -313,8 +351,9 @@ export class Game {
 
   _targetSpeed() {
     const base = 12.6 + this.doneCount * 0.85;
-    const ramp = Math.min(3.2, this.distance * 0.0011);
-    return Math.min(21, base + ramp);
+    const ramp = Math.min(6.5, this.distance * 0.0024);
+    const boost = this.boostT > 0 ? 8.5 : 0;
+    return Math.min(28, base + ramp + boost);
   }
 
   _updatePlayer(dt) {
@@ -350,15 +389,20 @@ export class Game {
     let support = 0;
     let landed = null;
     for (const e of this.entities) {
-      if (e.kind !== 'platform' || !this._overPlatform(e)) continue;
-      if (this.y >= e.height - 0.3) support = Math.max(support, e.height);
-      if (this.vy <= 0 && prevY >= e.height - 0.08 && this.y <= e.height) {
-        if (!landed || e.height > landed.height) landed = e;
+      if (e.kind !== 'platform') continue;
+      const surface = this._surfaceAt(e);
+      if (surface == null) continue;
+      if (this.y >= surface - 0.4) support = Math.max(support, surface);
+      if (this.vy <= 0 && prevY >= surface - 0.12 && this.y <= surface + 0.05) {
+        if (!landed || surface > landed.surface) landed = { surface };
       }
     }
     this.supportY = support;
     if (landed) {
-      this.y = landed.height;
+      this.y = landed.surface;
+      this.vy = 0;
+    } else if (support > 0 && this.vy <= 0.4 && this.y <= support && this.y >= support - 0.55) {
+      this.y = support;
       this.vy = 0;
     } else if (this.y <= 0) {
       this.y = 0;
@@ -368,8 +412,9 @@ export class Game {
     this.mochi.root.position.set(this.x, this.y, 0);
   }
 
-  _overPlatform(e) {
-    return inLane(this.x, LANES[e.lane], false, 0.86) && Math.abs(e.mesh.position.z) < e.length * 0.5 + 0.2;
+  _surfaceAt(e) {
+    if (!inLane(this.x, LANES[e.lane], false, 0.95)) return null;
+    return platformSurface(e.mesh.position.z, e.length, e.height, e.ramp || 0);
   }
 
   _scroll(dt) {
@@ -398,7 +443,8 @@ export class Game {
     if (i === 2) return this._duck(z, 2);
     if (i === 3) return this._tall(z);
     if (i === 4) return this._platform(z);
-    if (i === 5) return this._apex(z);
+    if (i === 5) return this._train(z);
+    if (i === 6) return this._boost(z);
     const hard = this.doneCount;
     const table = [
       { w: 15, fn: () => this._coins(z, lane(), tier(), 4) },
@@ -407,10 +453,11 @@ export class Game {
       { w: 9 + hard * 2, fn: () => this._tall(z) },
       { w: 7 + hard * 2, fn: () => this._gate(z) },
       { w: 8, fn: () => this._platform(z) },
+      { w: 9, fn: () => this._train(z) },
+      { w: 8, fn: () => this._boost(z) },
       { w: 8, fn: () => this._cables(z) },
       { w: 7 + hard, fn: () => this._mixed(z) },
       { w: 6, fn: () => this._jackpot(z) },
-      { w: 7, fn: () => this._apex(z) },
       { w: 7, fn: () => this._overheadAll(z) },
     ];
     let total = 0;
@@ -458,9 +505,30 @@ export class Game {
 
   _platform(z) {
     const id = lane();
-    this._spawnPlatform(z + 11, id);
-    this._spawnCoin(z + 11, id, 5000, 2.15);
+    const height = 1.15;
+    const length = 8;
+    this._spawnPlatform(z + 11, id, { height, length, ramp: 0, width: 1.8 });
+    this._spawnCoin(z + 11, id, 10000, height + 2.35, height + 0.08);
+    this._spawnCoin(z + 11, id, 1000, height + 1.05);
     for (const other of [0, 1, 2]) if (other !== id) this._spawnCoin(z + 11, other, 500, 1.05);
+  }
+
+  _train(z) {
+    const id = lane();
+    const height = 1.85;
+    const length = 16;
+    const ramp = 5.2;
+    const center = z + 11;
+    this._spawnPlatform(center, id, { height, length, ramp, width: 1.85 });
+    const flatMid = ((-length / 2 + ramp) + length / 2) / 2;
+    this._spawnCoin(center + flatMid, id, 10000, height + 2.35, height + 0.08);
+    this._spawnCoin(center + flatMid - 2.2, id, 1000, height + 1.05);
+    this._spawnCoin(center + flatMid + 2.2, id, 500, height + 1.05);
+  }
+
+  _boost(z) {
+    this._spawnBoost(z + 10);
+    for (const id of [0, 1, 2]) this._spawnCoin(z + 16, id, 1000, 1.15);
   }
 
   _cables(z) {
@@ -481,16 +549,6 @@ export class Game {
     this._spawnCoin(z + 10, over, 500, 0.46);
   }
 
-  _apex(z) {
-    const id = lane();
-    this._spawnCoin(z + 12, id, 10000, 2.5);
-    for (const other of [0, 1, 2]) {
-      if (other === id) continue;
-      if (Math.random() < 0.7) this._spawnObstacle(z + 12, other, 'low');
-      else this._spawnCoin(z + 12, other, 500, 1.05);
-    }
-  }
-
   _jackpot(z) {
     const id = lane();
     this._spawnCoin(z + 8, id, 1000, 1.1);
@@ -503,7 +561,7 @@ export class Game {
     for (const id of [0, 1, 2]) this._spawnCoin(z + 10, id, 500, 0.46);
   }
 
-  _spawnCoin(z, laneIndex, tier, y) {
+  _spawnCoin(z, laneIndex, tier, y, markerY = null) {
     const mesh = makeCoin(this.lib, tier);
     mesh.position.set(LANES[laneIndex], y, z);
     this._add({
@@ -515,6 +573,7 @@ export class Game {
       phase: Math.random() * Math.PI * 2,
       got: false,
       marker: mesh.getObjectByName('marker'),
+      markerY,
     });
   }
 
@@ -537,8 +596,8 @@ export class Game {
     });
   }
 
-  _spawnPlatform(z, laneIndex) {
-    const made = makePlatform(this.lib);
+  _spawnPlatform(z, laneIndex, opts = {}) {
+    const made = makePlatform(this.lib, opts);
     made.mesh.position.set(LANES[laneIndex], 0, z);
     this._add({
       kind: 'platform',
@@ -546,7 +605,22 @@ export class Game {
       lane: laneIndex,
       height: made.height,
       length: made.length,
+      ramp: made.ramp,
       hit: false,
+      blinkers: made.blinkers || null,
+    });
+  }
+
+  _spawnBoost(z) {
+    const made = makeBoostPad(this.lib);
+    made.mesh.position.set(0, 0, z);
+    this._add({
+      kind: 'boost',
+      mesh: made.mesh,
+      lane: -1,
+      length: made.length,
+      allLanes: true,
+      pulsed: false,
     });
   }
 
@@ -569,7 +643,16 @@ export class Game {
             spark.position.set(Math.cos(a) * (0.5 + trail * 0.35), Math.sin(a * 1.35) * 0.3, 0.2 + trail * 1.45);
           });
         }
-        if (e.marker) e.marker.position.y = (0.055 - e.mesh.position.y) / e.mesh.scale.y;
+        if (e.marker) {
+          const deck = e.markerY == null ? 0.055 : e.markerY;
+          e.marker.position.y = (deck - e.mesh.position.y) / e.mesh.scale.y;
+        }
+      } else if (e.kind === 'boost' && e.mesh.userData.arrows) {
+        const len = e.mesh.userData.beltLen;
+        for (const arrow of e.mesh.userData.arrows) {
+          arrow.position.z += dt * 3.4;
+          if (arrow.position.z > len / 2 - 0.3) arrow.position.z -= len - 0.6;
+        }
       } else if (e.blinkers) {
         for (const b of e.blinkers) {
           b.mat.emissiveIntensity = Math.sin(this.time * 6 + b.phase) > 0.1 ? 1.9 : 0.22;
@@ -580,7 +663,7 @@ export class Game {
 
   _collect() {
     const chest = this.y + 1.05;
-    const airborne = this.y > 0.55;
+    const airborne = this.y > this.supportY + 0.45;
     for (const e of this.entities) {
       if (e.kind !== 'coin' || e.got) continue;
       const aerial = e.tier >= 10000;
@@ -634,11 +717,22 @@ export class Game {
         return;
       }
       if (e.kind === 'platform') {
-        if (e.hit || !this._overPlatform(e)) continue;
-        if (this.y >= e.height - 0.12) continue;
+        if (e.hit) continue;
+        const surface = this._surfaceAt(e);
+        if (surface == null) continue;
+        if (this.y >= surface - 0.2) continue;
         e.hit = true;
         this._hurt();
         return;
+      }
+      if (e.kind === 'boost') {
+        if (Math.abs(e.mesh.position.z) > e.length * 0.5) continue;
+        if (this.y > this.supportY + 0.35) continue;
+        this.boostT = 3;
+        if (!e.pulsed) {
+          e.pulsed = true;
+          this.audio.boost();
+        }
       }
     }
   }
@@ -647,18 +741,19 @@ export class Game {
     if (this.invuln > 0 || (this.state !== 'run' && this.state !== 'wipe')) return;
     this.lives -= 1;
     this.invuln = 1.75;
-    this.shake = 0.5;
-    this.flash = 0.7;
+    this.flash = 0.35;
     this.flashColor = '#ff5d7a';
-    this.vy = Math.max(this.vy, 6);
     this.audio.hit();
     if (this.lives <= 0) {
       this.state = 'wipe';
       this.wipeT = 0;
-      this.wipeDelay = 0.4;
+      this.wipeDelay = 0.55;
       this.gen = 0;
       this.lives = 0;
-      this.audio.wipe();
+      this.shake = 0;
+      this.vy = 0;
+      this.audio.crack();
+      this._spawnShards();
       this.bannerText = 'Stake lost — this validator resets';
       this.bannerT = 1.8;
     } else {
@@ -940,11 +1035,96 @@ export class Game {
     const k = staking ? Math.min(1, dt * 2.8) : 1 - Math.pow(0.0012, dt);
     this.camPos.lerp(desired, k);
     this.camera.position.copy(this.camPos);
+    const targetFov = this.boostT > 0 ? 62 : 50;
+    if (Math.abs(this.camera.fov - targetFov) > 0.04) {
+      this.camera.fov += (targetFov - this.camera.fov) * Math.min(1, dt * 6);
+      this.camera.updateProjectionMatrix();
+    }
     const look = staking
       ? new THREE.Vector3(this.x + side * 0.5, 1.25, 0.45)
       : new THREE.Vector3(this.x * 0.2, 1.05 + this.y * 0.1, 5.5);
     this.lookPos.lerp(look, k);
     this.camera.lookAt(this.lookPos);
+  }
+
+  _spawnShards() {
+    this._clearShards();
+    const colors = [0xee8521, 0xff4f9a, 0x8d81e1, 0xffe08a, 0x7af6ff, 0xfff6c8];
+    for (let i = 0; i < 26; i++) {
+      const color = colors[i % colors.length];
+      const mat = new THREE.MeshStandardMaterial({
+        color,
+        emissive: color,
+        emissiveIntensity: 0.85,
+        roughness: 0.32,
+        metalness: 0.4,
+        transparent: true,
+      });
+      const mesh = new THREE.Mesh(i % 2 ? this.lib.coin : new THREE.OctahedronGeometry(0.2, 0), mat);
+      mesh.scale.setScalar(0.28 + (i % 5) * 0.08);
+      const spread = (i / 26) * Math.PI * 2;
+      mesh.position.set(this.x + Math.cos(spread) * 0.2, 1.05 + (i % 4) * 0.12, Math.sin(spread) * 0.15);
+      this.scene.add(mesh);
+      this.shards.push({
+        mesh,
+        vel: new THREE.Vector3(Math.cos(spread) * (2.2 + (i % 4)), 3.2 + (i % 5) * 0.7, Math.sin(spread) * 2.4 - 1.2),
+        spin: Math.random() * 8 + 2,
+        life: 2.4,
+      });
+    }
+  }
+
+  _clearShards() {
+    for (const s of this.shards) {
+      this.scene.remove(s.mesh);
+      s.mesh.material.dispose();
+    }
+    this.shards = [];
+  }
+
+  _updateShards(dt) {
+    this.shards = this.shards.filter((s) => {
+      s.life -= dt;
+      s.vel.y -= 16 * dt;
+      s.mesh.position.addScaledVector(s.vel, dt);
+      s.mesh.position.z -= this.speed * dt;
+      s.mesh.rotation.x += s.spin * dt;
+      s.mesh.rotation.y += s.spin * 0.6 * dt;
+      if (s.mesh.position.y < 0.08) {
+        s.mesh.position.y = 0.08;
+        s.vel.y *= -0.28;
+        s.vel.x *= 0.65;
+        s.vel.z *= 0.65;
+        if (Math.abs(s.vel.y) < 0.35) s.vel.y = 0;
+      }
+      s.mesh.material.opacity = s.life < 0.45 ? Math.max(0, s.life / 0.45) : 1;
+      if (s.life > 0) return true;
+      this.scene.remove(s.mesh);
+      s.mesh.material.dispose();
+      return false;
+    });
+  }
+
+  _updateStreaks(dt) {
+    const on = this.boostT > 0;
+    for (let i = 0; i < this.streaks.length; i++) {
+      const streak = this.streaks[i];
+      streak.material.opacity = on ? 0.32 + (i % 3) * 0.14 : 0;
+      if (!on) continue;
+      streak.position.z += dt * 9;
+      if (streak.position.z > -1.15) streak.position.z = -3.4;
+      streak.scale.y = 1.6 + (i % 4) * 0.45;
+    }
+    for (let i = 0; i < this.trail.length; i++) {
+      const puff = this.trail[i];
+      puff.visible = on;
+      puff.material.opacity = on ? 0.55 - i * 0.05 : 0;
+      if (!on) continue;
+      const lead = i === 0 ? { x: this.x, y: 0.55 + this.y, z: -0.15 } : this.trail[i - 1].position;
+      puff.position.x += (lead.x - puff.position.x) * Math.min(1, dt * (14 - i));
+      puff.position.y += (lead.y - puff.position.y) * Math.min(1, dt * (14 - i));
+      puff.position.z += (lead.z - 0.28 - puff.position.z) * Math.min(1, dt * (14 - i));
+    }
   }
 }
 

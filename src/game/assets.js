@@ -23,14 +23,14 @@ export function makeGroundTexture(roadW) {
   const H = 512;
   const c = canvas(W, H);
   const g = c.getContext('2d');
-  g.fillStyle = '#d7a36e';
+  g.fillStyle = '#c48448';
   g.fillRect(0, 0, W, H);
 
   const u = (x) => ((x / roadW) + 0.5) * W;
   for (let y = 0; y < H; y += 48) {
     const offset = (y / 48) % 2 === 0 ? 0 : 18;
     for (let x = -20; x < W; x += 42) {
-      const shade = ((x + y) / 20) % 2 > 1 ? '#e6bc84' : '#c48958';
+      const shade = ((x + y) / 20) % 2 > 1 ? '#e09a58' : '#b46e38';
       g.fillStyle = shade;
       roundRect(g, x + offset, y + 3, 38, 42, 6);
       g.fill();
@@ -85,10 +85,10 @@ function roundRect(g, x, y, w, h, r) {
 export function makeGrassTexture() {
   const c = canvas(128, 128);
   const g = c.getContext('2d');
-  g.fillStyle = '#3f9a4c';
+  g.fillStyle = '#2f8f3c';
   g.fillRect(0, 0, 128, 128);
   for (let i = 0; i < 220; i++) {
-    g.fillStyle = i % 3 === 0 ? '#2c7a3a' : i % 3 === 1 ? '#58b562' : '#46a352';
+    g.fillStyle = i % 3 === 0 ? '#1f6e30' : i % 3 === 1 ? '#3eae52' : '#2f9440';
     const s = 3 + (i % 5);
     g.fillRect((i * 47) % 128, (i * 29) % 128, s, s);
   }
@@ -280,28 +280,28 @@ function paintBackdrop(c, img) {
   const W = c.width;
   const H = c.height;
   const sky = g.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, '#163e9e');
-  sky.addColorStop(0.28, '#2f74d8');
-  sky.addColorStop(0.52, '#79c4ef');
-  sky.addColorStop(0.74, '#f7b56a');
-  sky.addColorStop(1, '#f6d7b0');
+  sky.addColorStop(0, '#0b2ea6');
+  sky.addColorStop(0.34, '#1a58e4');
+  sky.addColorStop(0.62, '#2a8ef0');
+  sky.addColorStop(0.84, '#ff6a12');
+  sky.addColorStop(1, '#e25410');
   g.fillStyle = sky;
   g.fillRect(0, 0, W, H);
 
-  const glow = g.createRadialGradient(W * 0.5, H * 0.4, 20, W * 0.5, H * 0.42, 420);
-  glow.addColorStop(0, 'rgba(255, 236, 190, 0.95)');
-  glow.addColorStop(0.18, 'rgba(255, 150, 48, 0.75)');
-  glow.addColorStop(0.45, 'rgba(255, 120, 40, 0.18)');
-  glow.addColorStop(1, 'rgba(255, 120, 40, 0)');
+  const glow = g.createRadialGradient(W * 0.5, H * 0.46, 10, W * 0.5, H * 0.46, 280);
+  glow.addColorStop(0, 'rgba(255, 150, 40, 0.95)');
+  glow.addColorStop(0.22, 'rgba(255, 96, 16, 0.55)');
+  glow.addColorStop(0.5, 'rgba(255, 80, 20, 0.08)');
+  glow.addColorStop(1, 'rgba(255, 80, 20, 0)');
   g.fillStyle = glow;
   g.fillRect(0, 0, W, H);
-  g.fillStyle = '#ff9324';
+  g.fillStyle = '#ff7a18';
   g.beginPath();
-  g.arc(W * 0.5, H * 0.4, 78, 0, Math.PI * 2);
+  g.arc(W * 0.5, H * 0.46, 70, 0, Math.PI * 2);
   g.fill();
-  g.fillStyle = '#ffd27a';
+  g.fillStyle = '#ffb03a';
   g.beginPath();
-  g.arc(W * 0.5, H * 0.4, 48, 0, Math.PI * 2);
+  g.arc(W * 0.5, H * 0.46, 36, 0, Math.PI * 2);
   g.fill();
 
   paintCloud(g, 260, 210, 1.4, 'rgba(255,255,255,0.92)');
@@ -328,7 +328,9 @@ function paintBackdrop(c, img) {
     const off = canvas(W, H);
     const o = off.getContext('2d');
     const cropH = Math.floor(img.height * 0.42);
+    o.filter = 'saturate(1.7) contrast(1.2) brightness(0.82)';
     o.drawImage(img, 0, 0, img.width, cropH, W * 0.1, H * 0.0, W * 0.8, H * 0.62);
+    o.filter = 'none';
     o.globalCompositeOperation = 'destination-in';
     const mask = o.createLinearGradient(0, H * 0.02, 0, H * 0.74);
     mask.addColorStop(0, 'rgba(0,0,0,1)');
@@ -347,8 +349,8 @@ function paintBackdrop(c, img) {
     g.drawImage(off, 0, 0);
   }
 
-  paintCloud(g, 180, 620, 1.6, 'rgba(255,255,255,0.55)');
-  paintCloud(g, 1860, 640, 1.5, 'rgba(255,248,252,0.5)');
+  paintCloud(g, 180, 640, 1.3, 'rgba(255,255,255,0.28)');
+  paintCloud(g, 1860, 660, 1.2, 'rgba(255,248,252,0.24)');
 }
 
 export function makeGlowTexture() {

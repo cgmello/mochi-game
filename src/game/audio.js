@@ -76,6 +76,20 @@ export function createAudio() {
       ensure();
       noise(0.18, 0.12, 280);
     },
+    crack() {
+      const t = ensure().currentTime;
+      noise(0.16, 0.18, 1400);
+      tone(160, t, 0.14, 0.07, 'square');
+      tone(90, t + 0.06, 0.22, 0.05, 'sine');
+      tone(1480, t + 0.02, 0.04, 0.03, 'square');
+      tone(880, t + 0.07, 0.05, 0.025, 'triangle');
+    },
+    boost() {
+      const t = ensure().currentTime;
+      tone(240, t, 0.16, 0.04, 'sawtooth');
+      tone(480, t + 0.06, 0.18, 0.04, 'triangle');
+      tone(720, t + 0.12, 0.16, 0.03, 'sine');
+    },
     wipe() {
       const t = ensure().currentTime;
       tone(392, t, 0.16, 0.05, 'sawtooth');

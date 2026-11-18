@@ -23,6 +23,15 @@ export function inDepth(z, halfZ, pad = 0.32) {
   return Math.abs(z) < halfZ + pad;
 }
 
+/** Height of a platform under Mochi (world z = 0). Ramp rises from the near (-Z) end. */
+export function platformSurface(centerZ, length, height, rampLen = 0) {
+  const along = length * 0.5 - centerZ;
+  if (along < -0.15 || along > length + 0.12) return null;
+  const t = Math.max(0, Math.min(length, along));
+  if (rampLen > 0 && t < rampLen) return (height * t) / rampLen;
+  return height;
+}
+
 function clamp(v, a, b) {
   return Math.max(a, Math.min(b, v));
 }

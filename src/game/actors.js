@@ -30,17 +30,17 @@ export function makeMochi(lib) {
   bob.add(legL, legR);
 
   const upper = new THREE.Group();
-  upper.position.y = 0.58;
+  upper.position.y = 0.46;
   bob.add(upper);
 
-  const torso = new THREE.Mesh(new THREE.SphereGeometry(0.3, 24, 16), lib.suit);
-  torso.scale.set(0.92, 1.12, 0.82);
-  torso.position.y = 0.36;
+  const torso = new THREE.Mesh(new THREE.SphereGeometry(0.42, 28, 20), lib.suit);
+  torso.scale.set(1.18, 1.02, 1.05);
+  torso.position.y = 0.4;
   upper.add(torso);
 
-  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.24, 20, 14), lib.suit);
-  belly.scale.set(0.95, 0.85, 0.78);
-  belly.position.y = 0.14;
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.34, 22, 16), lib.suit);
+  belly.scale.set(1.15, 0.9, 0.95);
+  belly.position.y = 0.16;
   upper.add(belly);
 
   const logo = new THREE.Mesh(lib.mark, lib.logo);
@@ -48,22 +48,22 @@ export function makeMochi(lib) {
   logo.position.set(0, 0.32, 0.3);
   upper.add(logo);
 
-  const backDot = new THREE.Mesh(new THREE.CircleGeometry(0.06, 16), lib.cyanDot);
-  backDot.position.set(0, 0.4, -0.27);
+  const backDot = new THREE.Mesh(new THREE.CircleGeometry(0.075, 18), lib.cyanDot);
+  backDot.position.set(0, 0.42, -0.4);
   backDot.rotation.y = Math.PI;
   upper.add(backDot);
 
-  const hipDot = new THREE.Mesh(new THREE.CircleGeometry(0.042, 14), lib.cyanDot);
-  hipDot.position.set(0.08, 0.1, -0.22);
+  const hipDot = new THREE.Mesh(new THREE.CircleGeometry(0.055, 16), lib.cyanDot);
+  hipDot.position.set(0.12, 0.12, -0.32);
   hipDot.rotation.y = Math.PI;
   upper.add(hipDot);
 
   const head = new THREE.Group();
-  head.position.y = 0.92;
+  head.position.y = 0.98;
   upper.add(head);
 
-  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.44, 32, 22), lib.helmet);
-  helmet.scale.set(1.02, 0.98, 1);
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 22), lib.helmet);
+  helmet.scale.set(1.05, 1, 1.02);
   head.add(helmet);
 
   const visor = new THREE.Mesh(new THREE.SphereGeometry(0.3, 20, 14), new THREE.MeshStandardMaterial({
@@ -108,7 +108,7 @@ function makeEar(lib, side) {
   inner.position.set(0, 0.01, -0.03);
   inner.scale.set(1, 1, 0.7);
   g.add(outline, inner);
-  g.position.set(side * 0.22, 0.34, -0.06);
+  g.position.set(side * 0.26, 0.38, -0.08);
   g.rotation.z = side * -0.32;
   g.rotation.x = 0.35;
   return g;
@@ -125,43 +125,44 @@ function makeHeadphone(lib, side) {
   shine.position.set(side * 0.02, 0.02, -0.07);
   shine.rotation.y = side > 0 ? -2.4 : 2.4;
   g.add(cup, pad, shine);
-  g.position.set(side * 0.4, -0.04, -0.08);
+  g.position.set(side * 0.52, -0.02, -0.1);
   return g;
 }
 
 function makeArm(lib, side) {
   const pivot = new THREE.Group();
-  pivot.position.set(side * 0.32, 0.4, 0);
-  const joint = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 10), lib.cyanDot);
+  pivot.position.set(side * 0.46, 0.48, 0);
+  const joint = new THREE.Mesh(new THREE.SphereGeometry(0.1, 14, 12), lib.cyanDot);
   pivot.add(joint);
-  const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.16, 4, 8), lib.arm);
+  const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.12, 5, 10), lib.arm);
   upper.position.y = -0.16;
   const elbow = new THREE.Group();
   elbow.position.y = -0.28;
-  const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.046, 0.14, 4, 8), lib.arm);
+  const elbowDot = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 10), lib.cyanDot);
+  const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.1, 5, 10), lib.arm);
   fore.position.y = -0.12;
-  const hand = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8), lib.arm);
-  hand.scale.set(1.1, 0.9, 1.15);
-  hand.position.y = -0.24;
-  elbow.add(fore, hand);
+  const hand = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 12), lib.arm);
+  hand.scale.set(1.25, 0.95, 1.15);
+  hand.position.y = -0.26;
+  elbow.add(elbowDot, fore, hand);
   pivot.add(upper, elbow);
   pivot.elbow = elbow;
-  pivot.rotation.z = side * 0.2;
+  pivot.rotation.z = side * 0.15;
   return pivot;
 }
 
 function makeLeg(lib, side) {
   const pivot = new THREE.Group();
-  pivot.position.set(side * 0.13, 0.56, 0);
-  const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.16, 4, 8), lib.suit);
-  thigh.position.y = -0.14;
+  pivot.position.set(side * 0.18, 0.4, 0);
+  const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.08, 5, 10), lib.suit);
+  thigh.position.y = -0.12;
   const knee = new THREE.Group();
-  knee.position.y = -0.26;
-  const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.065, 0.14, 4, 8), lib.suit);
-  shin.position.y = -0.12;
-  const foot = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8), lib.suit);
-  foot.scale.set(1.1, 0.55, 1.45);
-  foot.position.set(0, -0.26, 0.05);
+  knee.position.y = -0.2;
+  const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.06, 5, 10), lib.suit);
+  shin.position.y = -0.1;
+  const foot = new THREE.Mesh(new THREE.SphereGeometry(0.15, 14, 12), lib.suit);
+  foot.scale.set(1.15, 0.62, 1.45);
+  foot.position.set(0, -0.2, 0.04);
   knee.add(shin, foot);
   pivot.add(thigh, knee);
   pivot.knee = knee;
@@ -178,7 +179,7 @@ function makeTail(lib) {
     new THREE.Vector3(-0.68, 0.02, -0.62),
     new THREE.Vector3(-0.86, 0.32, -0.5),
   ]);
-  const mesh = new THREE.Mesh(new THREE.TubeGeometry(curve, 28, 0.042, 8, false), lib.tail);
+  const mesh = new THREE.Mesh(new THREE.TubeGeometry(curve, 28, 0.07, 8, false), lib.tail);
   g.add(mesh);
   g.userData.segs = [];
   return g;
@@ -223,7 +224,7 @@ export function updateMochi(m, time, speed, grounded, duck, lean, dt) {
   m.armR.rotation.z = -0.22;
   m.upper.rotation.x = duck * 1.05 + (grounded && !ducking ? 0.1 : 0);
   m.upper.rotation.z = grounded && !ducking ? s * 0.06 : 0;
-  m.upper.position.y = 0.58 - duck * 0.32;
+  m.upper.position.y = 0.46 - duck * 0.28;
   m.upper.position.z = duck * 0.2;
   m.bob.position.y = grounded && !ducking ? Math.abs(Math.cos(pace)) * 0.075 : 0;
   m.bob.rotation.y = grounded && !ducking ? s * 0.07 : 0;

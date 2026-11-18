@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bodyTop, obstacleHits, inLane, inDepth } from '../src/game/collision.js';
+import { bodyTop, obstacleHits, inLane, inDepth, platformSurface } from '../src/game/collision.js';
+import { LANES, laneStep } from '../src/game/constants.js';
 
 test('standing body reaches overhead bars', () => {
   const top = bodyTop(0, 0);
@@ -32,6 +33,32 @@ test('a jump clears low obstacles', () => {
 test('tall racks cannot be jumped', () => {
   assert.equal(obstacleHits(1.4, 3.1, 'tall', 0, 0), true);
   assert.equal(obstacleHits(0, 1.68, 'tall', 0, 0), true);
+});
+
+test('right moves toward screen-right, which is -X', () => {
+  assert.equal(laneStep(1, 'right'), 0);
+  assert.equal(laneStep(1, 'left'), 2);
+  assert.equal(LANES[laneStep(1, 'right')], -2.2);
+  assert.equal(LANES[laneStep(1, 'left')], 2.2);
+  assert.equal(laneStep(0, 'right'), 0);
+  assert.equal(laneStep(2, 'left'), 2);
+});
+
+test('a ramp is low at the near end and full height on the flat', () => {
+  const length = 16;
+  const height = 1.85;
+  const ramp = 5;
+  const front = platformSurface(length / 2, length, height, ramp);
+  assert.equal(front, 0);
+  const midRamp = platformSurface(length / 2 - ramp / 2, length, height, ramp);
+  assert.ok(Math.abs(midRamp - height / 2) < 0.001);
+  const deck = platformSurface(0, length, height, ramp);
+  assert.equal(deck, height);
+  assert.equal(platformSurface(length / 2 + 1, length, height, ramp), null);
+});
+
+test('a platform with no ramp is a full-height face', () => {
+  assert.equal(platformSurface(3, 8, 1.15, 0), 1.15);
 });
 
 test('lane and depth gates', () => {

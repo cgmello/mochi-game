@@ -10,3 +10,9 @@ export const ROAD_W = 8.4;
 
 export const GRAVITY = -27;
 export const JUMP_V = 9.15;
+
+/** Camera looks toward +Z, so screen-right is decreasing world X (LANES[0]). */
+export function laneStep(lane, direction) {
+  const delta = direction === 'right' ? -1 : direction === 'left' ? 1 : 0;
+  return Math.max(0, Math.min(LANES.length - 1, lane + delta));
+}

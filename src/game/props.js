@@ -469,9 +469,8 @@ function makeCloud(tint, opacity) {
   return g;
 }
 
-export function buildAtmosphere(lib, camera) {
+export function buildAtmosphere(lib) {
   const rig = new THREE.Group();
-  camera.add(rig);
 
   const sky = new THREE.Mesh(new THREE.SphereGeometry(420, 32, 20), skyMaterial());
   sky.frustumCulled = false;
@@ -558,6 +557,16 @@ export function buildAtmosphere(lib, camera) {
     island.scale.setScalar(s);
     rig.add(island);
   }
+
+  rig.traverse((obj) => {
+    obj.frustumCulled = false;
+    obj.renderOrder = -1;
+    const mats = obj.material ? (Array.isArray(obj.material) ? obj.material : [obj.material]) : [];
+    for (const mat of mats) {
+      mat.depthWrite = false;
+      mat.fog = false;
+    }
+  });
 
   return { rig, decor, bolts };
 }

@@ -50,7 +50,7 @@ W, A, S, D e espaço repetem pulo e troca de faixa.
 | Seta esquerda / direita | Virar |
 | Espaço | Pular, inclusive de servidor em servidor |
 
-W, A e D repetem correr e virar. Seta para baixo e S não fazem nada. O minimapa mostra as três ilhas, as pontes e para onde a Mochi está olhando. Cada briga resolvida vale **1 token**. São **45 brigas** numa corrida só, uma dupla por fosso, cerca de 15 em cada ilha, com **5 minutos** no relógio: **Contract Market** (piso rosa), **Oracle Port** (grade verde-água) e **Rally Square** (laranja e ouro). Pontes livres ligam as ilhas. Aranhas-robô patrulham o piso. Faixas com setas dão cerca de 3 segundos de impulso.
+W, A e D repetem correr e virar. Seta para baixo e S andam para trás devagar. O minimapa mostra as três ilhas, as pontes e para onde a Mochi está olhando. Cada briga resolvida vale **1 token**. Moedas douradas grandes, em lugares altos, valem **3 tokens** e aparecem no minimapa. São **45 brigas** numa corrida só, uma dupla por fosso, cerca de 15 em cada ilha, com **5 minutos** no relógio: **Contract Market** (piso rosa), **Oracle Port** (grade verde-água) e **Rally Square** (laranja e ouro). Pontes livres ligam as ilhas. Aranhas-robô patrulham o piso. Faixas com setas dão cerca de 3 segundos de impulso.
 
 Se o tempo acaba, a tela **THE END** aparece, os tokens da corrida se perdem e o percurso recomeça. Vencer é juntar os 45. Buracos em volta dos agentes têm borda de alerta e um vão ou uma ponte. Cair custa 1 token e a Mochi volta ao último **checkpoint**. Uma fileira de servidores, pulada em sequência até o último, faz a Mochi dar cambalhotas no ar.
 

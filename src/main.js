@@ -29,6 +29,7 @@ const timeupName = document.getElementById('timeup-name');
 const timeupScore = document.getElementById('timeup-score');
 const timerEl = document.getElementById('timer');
 const islandNameEl = document.getElementById('island-name');
+const bonusEl = document.getElementById('bonus');
 const runScore = document.getElementById('run-score');
 const runStake = document.getElementById('run-stake');
 const roamHud = document.getElementById('roam-hud');
@@ -107,9 +108,11 @@ function actionFor(code) {
       ArrowLeft: 'left',
       ArrowRight: 'right',
       ArrowUp: 'forward',
+      ArrowDown: 'back',
       KeyA: 'left',
       KeyD: 'right',
       KeyW: 'forward',
+      KeyS: 'back',
       Space: 'hop',
     }[code];
   }
@@ -132,10 +135,6 @@ window.addEventListener('keydown', (event) => {
     begin();
     return;
   }
-  if (game.phase === 2 && (event.code === 'ArrowDown' || event.code === 'KeyS')) {
-    event.preventDefault();
-    return;
-  }
   const action = actionFor(event.code);
   if (!action) return;
   event.preventDefault();
@@ -151,10 +150,6 @@ window.addEventListener('keydown', (event) => {
 
 window.addEventListener('keyup', (event) => {
   held.delete(event.code);
-  if (game.phase === 2 && (event.code === 'ArrowDown' || event.code === 'KeyS')) {
-    event.preventDefault();
-    return;
-  }
   if (game.phase === 2) {
     const action = actionFor(event.code);
     if (action && action !== 'hop') game.hold(action, false);
@@ -201,7 +196,7 @@ for (const button of document.querySelectorAll('[data-act]')) {
   button.addEventListener('pointerdown', (event) => {
     event.preventDefault();
     if (game.phase === 2) {
-      const roamAct = act === 'jump' ? 'forward' : act === 'left' || act === 'right' || act === 'hop' ? act : null;
+      const roamAct = act === 'jump' ? 'forward' : act === 'duck' ? 'back' : act === 'left' || act === 'right' || act === 'hop' ? act : null;
       if (!roamAct) return;
       if (roamAct === 'hop') game.press('hop');
       else game.hold(roamAct, true);
@@ -255,6 +250,14 @@ function drawMap(map) {
     ctx.arc(px(isle.x), py(isle.z), isle.r * scale, 0, Math.PI * 2);
     ctx.fill();
   }
+  ctx.fillStyle = '#ffd15a';
+  for (const coin of map.bonuses || []) {
+    ctx.save();
+    ctx.translate(px(coin.x), py(coin.z));
+    ctx.rotate(Math.PI / 4);
+    ctx.fillRect(-3.2, -3.2, 6.4, 6.4);
+    ctx.restore();
+  }
   ctx.fillStyle = '#ff3358';
   for (const fight of map.fights) {
     ctx.beginPath();
@@ -291,6 +294,7 @@ function paint(snap) {
   if (phase2) {
     feesEl.textContent = Math.floor(snap.fees).toLocaleString('en-US');
     resolvedEl.textContent = `${snap.resolved} / ${snap.goal} conflicts`;
+    bonusEl.textContent = `${snap.bonus} / ${snap.bonusTotal} bonus`;
     islandNameEl.textContent = snap.islandName;
     const secs = Math.max(0, Math.ceil(snap.timeLeft));
     timerEl.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;

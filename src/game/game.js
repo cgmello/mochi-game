@@ -103,8 +103,10 @@ export class Game {
     this.scene.environmentIntensity = 0.28;
     pmrem.dispose();
 
-    this.scene.add(new THREE.HemisphereLight(0x6eb6ff, 0xc46a32, 0.48));
+    this.hemi = new THREE.HemisphereLight(0x6eb6ff, 0xc46a32, 0.48);
+    this.scene.add(this.hemi);
     const sun = new THREE.DirectionalLight(0xffc98a, 1.25);
+    this.sunLight = sun;
     sun.position.set(-28, 46, 16);
     const fill = new THREE.DirectionalLight(0x9eb6ff, 0.42);
     fill.position.set(18, 14, -10);
@@ -147,7 +149,11 @@ export class Game {
       this.tiles.push(tile);
     }
 
-    this.atmosphere = buildAtmosphere(this.lib, this.camera);
+    this.skyScene = new THREE.Scene();
+    this.skyCamera = new THREE.PerspectiveCamera(50, 1, 0.5, 1400);
+    this.atmosphere = buildAtmosphere(this.lib);
+    this.skyCamera.add(this.atmosphere.rig);
+    this.skyScene.add(this.skyCamera);
     this.streaks = [];
     for (let i = 0; i < 12; i++) {
       const side = i < 6 ? -1 : 1;
@@ -245,6 +251,8 @@ export class Game {
       this.scene.fog.near = 200;
       this.scene.fog.far = 460;
       this.camera.far = 500;
+      if (this.hemi) this.hemi.color.setHex(0x6eb6ff);
+      if (this.sunLight) this.sunLight.color.setHex(0xffc98a);
       this.camera.fov = 50;
       this.camera.updateProjectionMatrix();
     }
@@ -332,6 +340,10 @@ export class Game {
     this.height = window.innerHeight;
     this.camera.aspect = this.width / Math.max(1, this.height);
     this.camera.updateProjectionMatrix();
+    if (this.skyCamera) {
+      this.skyCamera.aspect = this.camera.aspect;
+      this.skyCamera.updateProjectionMatrix();
+    }
     this.renderer.setSize(this.width, this.height);
   }
 
@@ -414,7 +426,21 @@ export class Game {
   }
 
   render() {
+    const sky = this.skyCamera;
+    if (sky) {
+      sky.fov = this.camera.fov;
+      sky.aspect = this.camera.aspect;
+      sky.position.copy(this.camera.position);
+      sky.quaternion.copy(this.camera.quaternion);
+      sky.updateProjectionMatrix();
+      sky.updateMatrixWorld(true);
+      this.renderer.autoClear = false;
+      this.renderer.clear();
+      this.renderer.render(this.skyScene, sky);
+      this.renderer.clearDepth();
+    }
     this.renderer.render(this.scene, this.camera);
+    this.renderer.autoClear = true;
   }
 
   snapshot() {
@@ -430,6 +456,8 @@ export class Game {
       goal: this.phase === 2 ? this.roam.goal : 45,
       timeLeft: this.phase === 2 ? this.roam.timeLeft : 0,
       islandName: this.phase === 2 ? this.roam.islandName : '',
+      bonus: this.phase === 2 ? this.roam.bonus : 0,
+      bonusTotal: this.phase === 2 ? this.roam.bonusTotal : 0,
       islandIndex: this.phase === 2 ? this.roam.islandIndex : 0,
       lostTokens: this.phase === 2 ? this.roam.lostTokens : 0,
       map: this.phase === 2 ? this.roam.mapSnapshot() : null,

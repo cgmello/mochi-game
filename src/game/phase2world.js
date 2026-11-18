@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { matte } from './phase2tex.js';
 import { addSetPieces } from './phase2set.js';
-import { ISLANDS, bridgeSolids, clusterCenters, freeSpot } from './phase2layout.js';
+import { ISLANDS, ISLAND_R, bridgeSolids, clusterCenters, fightSpots, bonusSpots, freeSpot } from './phase2layout.js';
 
 const TRICK = [
   [12, 6.2], [14.8, 6.2], [17.6, 6.2], [20.4, 6.2], [23.2, 6.2],
@@ -30,7 +30,10 @@ export function buildCourse(tex) {
 
   for (const isle of ISLANDS) addIsland(group, isle, tex);
   for (const bridge of bridgeSolids()) addBridge(group, solids, tex, bridge);
-  for (const spot of clusterCenters()) addMoat(group, solids, pits, spot);
+  for (const spot of fightSpots()) {
+    if (spot.kind === 'moat') addMoat(group, solids, pits, spot);
+    else if (spot.kind !== 'alley' && spot.kind !== 'corner' && spot.kind !== 'bridge') addPerch(group, solids, tex, spot);
+  }
   addScatter(group, solids, tex);
   leds = addLeds(group);
   addTricks(group, solids, tex);
@@ -54,7 +57,9 @@ export function buildCourse(tex) {
     if (pieces.portal) portal = pieces.portal;
     solidifySetPieces(holder, solids);
     addSign(group, isle, solids);
+    dressIsland(group, solids, tex, isle);
   }
+  const bonuses = addBonuses(group, solids, tex);
   clearBridgeDeck(group);
   addCheckpoint(group, checks, solids, 0, -52, true);
   for (const isle of ISLANDS) addCheckpoint(group, checks, solids, isle.cx + 6, isle.cz - 30, false);
@@ -65,7 +70,7 @@ export function buildCourse(tex) {
   }
 
   return {
-    group, solids, pits, cables, zaps, unstables: [], bugs, checks, leds, boosts, pink, whale, orbits, portal,
+    group, solids, pits, cables, zaps, unstables: [], bugs, checks, leds, boosts, pink, whale, orbits, portal, bonuses,
   };
 }
 
@@ -203,15 +208,14 @@ function onDeck(x, z) {
 function blocked(isle, x, z) {
   const lx = x - isle.cx;
   const lz = z - isle.cz;
-  if (Math.abs(lz) < 4.6) return true;
+  const road = isle.kind === 'rally' ? 10 : isle.kind === 'harbor' ? 5.2 : 3.3;
+  if (Math.abs(lz) < road) return true;
   if (Math.hypot(lx - 16, lz + 50) < 5) return true;
   if (Math.abs(lx) < 4.2 && lz < -6) return true;
   if (Math.hypot(lx, lz) > isle.r - 5) return true;
   if (onDeck(x, z)) return true;
-  if (clusterCenters().some((spot) => {
-    if (Math.hypot(x - spot.x, z - spot.z) < 4.6) return true;
-    return Math.abs(x - spot.x) < 3.6 && z < spot.z && z > spot.z - 8;
-  })) return true;
+  if (fightSpots().some((spot) => Math.hypot(x - spot.x, z - spot.z) < 3.6)) return true;
+  if (clusterCenters().some((spot) => Math.abs(x - spot.x) < 3.6 && z < spot.z && z > spot.z - 8)) return true;
   return false;
 }
 
@@ -257,7 +261,8 @@ function addScatter(group, solids, tex) {
       ri += 1;
       solids.push({ x, z, hw: 0.55, hd: 0.36, top: 2.2 });
     }
-    for (let n = 0; n < 12; n++) {
+    const towers = isle.kind === 'market' ? 9 : isle.kind === 'harbor' ? 3 : 2;
+    for (let n = 0; n < towers; n++) {
       const ang = 0.5 + n * 0.5;
       const rad = 28 + (n % 4) * 8;
       const x = isle.cx + Math.cos(ang) * rad;
@@ -560,7 +565,7 @@ function makeSpider() {
   }
   g.userData.legs = legs;
   g.userData.eyes = eyes;
-  g.scale.setScalar(1.55);
+  g.scale.setScalar(0.78);
   return g;
 }
 
@@ -606,10 +611,13 @@ function addHazards(group, cables, zaps, bugs) {
       zaps.push({ x, z, y: 0.4, cool: 0, mesh });
     }
   }
-  for (const spot of clusterCenters()) {
-    const mesh = makeSpider();
-    group.add(mesh);
-    bugs.push({ mesh, cx: spot.x + 6.4, cz: spot.z + 0.2, r: 1.35, y: 0, phase: spot.x * 0.17 });
+  for (const isle of ISLANDS) {
+    const patrols = [[-24, 18], [30, -22], [-16, -34], [22, 26]];
+    patrols.forEach(([lx, lz], i) => {
+      const mesh = makeSpider();
+      group.add(mesh);
+      bugs.push({ mesh, cx: isle.cx + lx, cz: isle.cz + lz, r: 1.5, y: 0, phase: isle.index + i });
+    });
   }
 }
 
@@ -703,4 +711,226 @@ function clearBridgeDeck(group) {
     }
   });
   for (const obj of doomed) obj.parent?.remove(obj);
+}
+
+function addPerch(group, solids, tex, spot) {
+  const isle = ISLANDS[spot.island];
+  const top = spot.y;
+  if (spot.kind === 'dock') {
+    const edge = Math.sign(spot.lx || 1) * (isle.r - 1);
+    const mid = (edge + spot.lx) / 2;
+    const len = Math.abs(spot.lx - edge) + 3;
+    const plank = new THREE.Mesh(new THREE.BoxGeometry(len, 0.2, 2.6), matte(tex.rack, 0xd7b07a, 0.62));
+    plank.position.set(isle.cx + mid, top - 0.1, spot.z);
+    group.add(plank);
+    solids.push({ x: isle.cx + mid, z: spot.z, hw: len / 2, hd: 1.3, top });
+    return;
+  }
+  const wide = spot.kind === 'stage' || spot.kind === 'terrace';
+  const hw = wide ? 2.6 : 1.45;
+  const hd = wide ? 1.7 : 1.05;
+  const mat = spot.kind === 'rack' ? matte(tex.rack) : matte(tex.metal, spot.kind === 'crate' ? 0xd8b48a : isle.accent, 0.48);
+  const box = new THREE.Mesh(new THREE.BoxGeometry(hw * 2, Math.max(0.2, top), hd * 2), mat);
+  box.position.set(spot.x, top / 2, spot.z);
+  group.add(box);
+  solids.push({ x: spot.x, z: spot.z, hw, hd, top });
+  if (top > 1.05) {
+    const stepTop = Math.min(0.8, top * 0.5);
+    const step = new THREE.Mesh(new THREE.BoxGeometry(hw * 1.3, stepTop, 1.15), mat);
+    step.position.set(spot.x, stepTop / 2, spot.z - hd - 0.5);
+    group.add(step);
+    solids.push({ x: spot.x, z: spot.z - hd - 0.5, hw: hw * 0.65, hd: 0.55, top: stepTop });
+  }
+}
+
+function addBonuses(group, solids, tex) {
+  const gold = new THREE.MeshStandardMaterial({ color: 0xffd15a, emissive: 0xff9a1a, emissiveIntensity: 0.7, metalness: 0.55, roughness: 0.28 });
+  const coins = [];
+  for (const spot of bonusSpots()) {
+    const pedestal = new THREE.Mesh(new THREE.BoxGeometry(1.5, spot.y, 1.5), matte(tex.metal, 0xffe08a, 0.4));
+    pedestal.position.set(spot.x, spot.y / 2, spot.z);
+    const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.18, 24), gold);
+    const mark = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.08, 8, 18), gold);
+    mark.rotation.x = Math.PI / 2;
+    mark.position.y = 0.12;
+    const mesh = new THREE.Group();
+    mesh.add(coin, mark);
+    mesh.position.set(spot.x, spot.y + 1.25, spot.z);
+    mesh.scale.setScalar(1.7);
+    mesh.userData.kind = 'bonus';
+    group.add(pedestal, mesh);
+    solids.push({ x: spot.x, z: spot.z, hw: 0.75, hd: 0.75, top: spot.y });
+    const stepTop = Math.min(0.75, spot.y * 0.48);
+    const step = new THREE.Mesh(new THREE.BoxGeometry(1.2, stepTop, 1.05), matte(tex.metal, 0xffd7a1, 0.45));
+    step.position.set(spot.x, stepTop / 2, spot.z - 1.5);
+    group.add(step);
+    solids.push({ x: spot.x, z: spot.z - 1.5, hw: 0.6, hd: 0.5, top: stepTop });
+    coins.push({ ...spot, mesh, hover: spot.y + 1.25, taken: false });
+  }
+  return coins;
+}
+
+function occupied(x, z) {
+  return fightSpots().some((spot) => Math.hypot(x - spot.x, z - spot.z) < 3.4);
+}
+
+function dressIsland(group, solids, tex, isle) {
+  addSkyline(group, isle);
+  if (isle.kind === 'market') dressMarket(group, solids, tex, isle);
+  else if (isle.kind === 'harbor') dressHarbor(group, solids, tex, isle);
+  else dressRally(group, solids, tex, isle);
+}
+
+function addSkyline(group, isle) {
+  const colors = isle.kind === 'harbor'
+    ? [0x147a86, 0x0e4e62, 0x2ad4c8]
+    : isle.kind === 'rally'
+      ? [0xff8a1a, 0xc45a12, 0xffd15a]
+      : [0xff4db2, 0x9a2a78, 0x6a3cff];
+  for (let i = 0; i < 8; i++) {
+    const ang = -0.85 + (i / 7) * 1.7;
+    const r = isle.r + 6 + (i % 3);
+    const x = isle.cx + Math.sin(ang) * r;
+    const z = isle.cz + Math.cos(ang) * r;
+    const h = isle.kind === 'harbor' ? 7 + (i % 4) * 2 : 9 + (i % 5) * 2.4;
+    let mesh;
+    if (isle.kind === 'harbor') {
+      mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.55, h, 6), new THREE.MeshStandardMaterial({ color: colors[i % 3], roughness: 0.45 }));
+    } else if (isle.kind === 'rally') {
+      mesh = new THREE.Mesh(new THREE.ConeGeometry(1.3 + (i % 2) * 0.4, h, 5), new THREE.MeshStandardMaterial({ color: colors[i % 3], roughness: 0.4 }));
+    } else {
+      mesh = new THREE.Mesh(new THREE.BoxGeometry(1.8, h, 1.4), new THREE.MeshStandardMaterial({ color: colors[i % 3], roughness: 0.42 }));
+    }
+    mesh.position.set(x, h / 2 - 1, z);
+    group.add(mesh);
+  }
+}
+
+function dressMarket(group, solids, tex, isle) {
+  const cloth = [0xff4db2, 0xc45cff, 0xff8ad4, 0xff5a9a];
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 4; col++) {
+      const x = isle.cx - 16 + col * 11;
+      const z = isle.cz + 16 + row * 9;
+      if (occupied(x, z) || Math.abs(z - isle.cz) < 3.3) continue;
+      const counter = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.9, 1.3), matte(tex.metal, 0xffd0ea, 0.5));
+      counter.position.set(x, 0.45, z);
+      const awning = new THREE.Mesh(
+        new THREE.BoxGeometry(3.6, 0.1, 1.8),
+        new THREE.MeshStandardMaterial({ color: cloth[(row + col) % cloth.length], roughness: 0.55, emissive: cloth[(row + col) % cloth.length], emissiveIntensity: 0.25 }),
+      );
+      awning.position.set(x, 1.7, z);
+      awning.rotation.x = -0.35;
+      const holo = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.7, 1.3),
+        new THREE.MeshBasicMaterial({ color: 0xb7fff4, transparent: true, opacity: 0.8, side: THREE.DoubleSide }),
+      );
+      holo.position.set(x + 1.1, 1.15, z + 0.2);
+      group.add(counter, awning, holo);
+      solids.push({ x, z, hw: 1.6, hd: 0.65, top: 0.9 });
+    }
+  }
+  for (const [lx, lz, label] of [[-30, 28, 'DEAL'], [24, 22, 'GEN'], [-8, -32, 'STAKE']]) {
+    const x = isle.cx + lx;
+    const z = isle.cz + lz;
+    if (occupied(x, z)) continue;
+    group.add(neonSign(x, z, label, '#ff4db2'));
+    solids.push({ x, z, hw: 0.2, hd: 0.8, top: 2.4 });
+  }
+}
+
+function dressHarbor(group, solids, tex, isle) {
+  const hullMat = new THREE.MeshStandardMaterial({ color: 0x147a86, roughness: 0.4, metalness: 0.25 });
+  const cabinMat = new THREE.MeshStandardMaterial({ color: 0xfff4e0, roughness: 0.5 });
+  for (const [lx, lz, rot] of [[-18, 78, 0.4], [26, 82, -0.5], [40, -76, 1.1]]) {
+    const boat = new THREE.Group();
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.7, 1.5), hullMat);
+    hull.position.y = 0.15;
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.85, 1.1), cabinMat);
+    cabin.position.set(-0.5, 0.75, 0);
+    boat.add(hull, cabin);
+    boat.position.set(isle.cx + lx, -0.2, isle.cz + lz);
+    boat.rotation.y = rot;
+    group.add(boat);
+  }
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 8, 6), matte(tex.metal, 0xd7fff8, 0.35));
+  mast.position.set(isle.cx + 28, 4, isle.cz + 42);
+  const boom = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.18, 0.18), matte(tex.metal, 0xffb15a, 0.4));
+  boom.position.set(isle.cx + 30.2, 7.2, isle.cz + 42);
+  group.add(mast, boom);
+  solids.push({ x: isle.cx + 28, z: isle.cz + 42, hw: 0.5, hd: 0.5, top: 8 });
+  const beacon = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.5, 10, 8), matte(tex.metal, 0xe8fff8, 0.4));
+  beacon.position.set(isle.cx - 6, 5, isle.cz + 52);
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.7, 12, 8), new THREE.MeshBasicMaterial({ color: 0x7af6ff, toneMapped: false }));
+  lamp.position.set(isle.cx - 6, 10.4, isle.cz + 52);
+  group.add(beacon, lamp);
+  solids.push({ x: isle.cx - 6, z: isle.cz + 52, hw: 1.5, hd: 1.5, top: 10 });
+  const boxes = [0x2ad4c8, 0xff8a1a, 0x243056, 0xff4db2];
+  for (let i = 0; i < 8; i++) {
+    const x = isle.cx - 40 + (i % 4) * 2.2;
+    const z = isle.cz + 8 + Math.floor(i / 4) * 2.4;
+    if (occupied(x, z)) continue;
+    const h = 1.1 + (i % 3) * 0.7;
+    const box = new THREE.Mesh(new THREE.BoxGeometry(1.8, h, 1.6), new THREE.MeshStandardMaterial({ color: boxes[i % 4], roughness: 0.45, metalness: 0.2 }));
+    box.position.set(x, h / 2, z);
+    group.add(box);
+    solids.push({ x, z, hw: 0.9, hd: 0.8, top: h });
+  }
+}
+
+function dressRally(group, solids, tex, isle) {
+  const screenMat = new THREE.MeshBasicMaterial({ color: 0x9dffe8, toneMapped: false });
+  for (const side of [-1, 1]) {
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.2, 6.2), matte(tex.metal, 0x2a2018, 0.4));
+    frame.position.set(isle.cx + side * 14, 2.4, isle.cz + 40);
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 3.2), screenMat);
+    screen.position.set(isle.cx + side * 14, 2.5, isle.cz + 39.7);
+    screen.rotation.y = side > 0 ? 0.15 : -0.15;
+    group.add(frame, screen);
+    solids.push({ x: isle.cx + side * 14, z: isle.cz + 40, hw: 0.4, hd: 3.1, top: 4.2 });
+  }
+  for (let i = 0; i < 4; i++) {
+    const h = 0.4 + i * 0.32;
+    for (const side of [-1, 1]) {
+      const x = isle.cx + side * (26 + i * 1.5);
+      const z = isle.cz + 4;
+      const bench = new THREE.Mesh(new THREE.BoxGeometry(1.3, h, 8), matte(tex.metal, 0xffb15a, 0.45));
+      bench.position.set(x, h / 2, z);
+      group.add(bench);
+      solids.push({ x, z, hw: 0.65, hd: 4, top: h });
+    }
+  }
+  for (const [lx, lz] of [[-20, 16], [18, 12], [-8, -16], [22, -8]]) {
+    const x = isle.cx + lx;
+    const z = isle.cz + lz;
+    if (occupied(x, z)) continue;
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.2, 5), matte(tex.metal, 0x2a2018, 0.4));
+    pole.position.set(x, 1.6, z);
+    const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.8), new THREE.MeshBasicMaterial({ color: 0xff8a1a, side: THREE.DoubleSide, toneMapped: false }));
+    flag.position.set(x + 0.7, 2.7, z);
+    group.add(pole, flag);
+  }
+}
+
+function neonSign(x, z, label, color) {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 96;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#140814';
+  ctx.fillRect(0, 0, 256, 96);
+  ctx.fillStyle = color;
+  ctx.font = '700 54px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, 128, 50);
+  const map = new THREE.CanvasTexture(c);
+  map.colorSpace = THREE.SRGBColorSpace;
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.8), new THREE.MeshBasicMaterial({ map, toneMapped: false }));
+  board.position.set(x, 2.3, z);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 2.3, 6), new THREE.MeshStandardMaterial({ color: 0x241428, roughness: 0.5 }));
+  pole.position.set(x, 1.15, z);
+  const g = new THREE.Group();
+  g.add(board, pole);
+  return g;
 }

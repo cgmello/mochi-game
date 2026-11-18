@@ -4,8 +4,11 @@ import {
   GOAL,
   ISLANDS,
   bridgeSolids,
+  BACK,
+  bonusSpots,
   fightSpots,
   freeSpot,
+  roamPace,
   mapForward,
   mapMarkerAngle,
   onIsland,
@@ -51,10 +54,31 @@ test('the course is 45 conflicts across three linked islands', () => {
     for (let i = 0; i < mine.length; i++) {
       for (let j = i + 1; j < mine.length; j++) {
         const d = Math.hypot(mine[i].x - mine[j].x, mine[i].z - mine[j].z);
-        assert.ok(d > 11, `${isle.name} fights ${i} and ${j} are ${d.toFixed(1)}m apart`);
+        assert.ok(d > 9, `${isle.name} fights ${i} and ${j} are ${d.toFixed(1)}m apart`);
       }
     }
   }
+});
+
+test('fights are spread across heights and only some sit in moats', () => {
+  const spots = fightSpots();
+  const kinds = new Set(spots.map((spot) => spot.kind));
+  assert.ok(kinds.size >= 5);
+  const moats = spots.filter((spot) => spot.kind === 'moat');
+  assert.ok(moats.length > 0 && moats.length < spots.length / 2);
+  assert.ok(spots.some((spot) => spot.y >= 1.5));
+  assert.ok(spots.some((spot) => spot.kind === 'bridge' || spot.kind === 'dock'));
+  const coins = bonusSpots();
+  assert.ok(coins.length >= 6 && coins.length <= 9);
+  assert.ok(coins.every((coin) => coin.value === 3));
+});
+
+test('down walks backwards slower than forward', () => {
+  const pace = 12.4;
+  assert.equal(roamPace({ forward: false, back: true }, pace, BACK), -BACK);
+  assert.ok(BACK < pace);
+  assert.equal(roamPace({ forward: true, back: true }, pace, BACK), pace);
+  assert.equal(roamPace({ forward: false, back: false }, pace), 0);
 });
 
 test('respawn nudges out of a solid and stays put on clear floor', () => {

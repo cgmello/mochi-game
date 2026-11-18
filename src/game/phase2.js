@@ -10,9 +10,11 @@ import {
   MAP,
   RUN_SECONDS,
   bridgeSolids,
+  BACK,
   fightSpots,
   freeSpot,
   onIsland,
+  roamPace,
   whichIsland,
 } from './phase2layout.js';
 
@@ -76,7 +78,9 @@ export function createRoam(game) {
     yaw: 0,
     vy: 0,
     support: 0,
-    holds: { forward: false, left: false, right: false },
+    holds: { forward: false, left: false, right: false, back: false },
+    bonus: 0,
+    bonusTotal: 0,
     fights: [],
     coins: [],
     npcs: [],
@@ -99,13 +103,14 @@ export function createRoam(game) {
     },
 
     hold(action, down) {
-      if (action === 'back' || action === 'duck') return;
+      if (action === 'duck') return;
       if (action in this.holds) this.holds[action] = down;
     },
     release() {
       this.holds.forward = false;
       this.holds.left = false;
       this.holds.right = false;
+      this.holds.back = false;
     },
 
     enter() {
@@ -138,6 +143,7 @@ export function createRoam(game) {
       this.islandIndex = isle.index;
       this.islandName = isle.name;
       this.zone = isle.id;
+      this._applyTint(isle);
       this.x = isle.cx;
       this.z = isle.cz - 20;
       this.y = 0;
@@ -174,6 +180,7 @@ export function createRoam(game) {
         islands: ISLANDS.map((isle) => ({ x: isle.cx, z: isle.cz, r: isle.r, color: isle.map })),
         bridges: bridgeSolids().map((bridge) => ({ x: bridge.x, z: bridge.z, hw: bridge.hw, hd: bridge.hd })),
         fights: this.fights.filter((f) => !f.resolved).map((f) => ({ x: f.x, z: f.z })),
+        bonuses: (world?.bonuses || []).filter((coin) => !coin.taken).map((coin) => ({ x: coin.x, z: coin.z })),
       };
     },
 
@@ -214,9 +221,9 @@ export function createRoam(game) {
       this.lostTokens = 0;
       this.boostT = 0;
       this.goal = GOAL;
-      game.scene.fog.color.setHex(0x16306e);
-      game.scene.fog.near = 340;
-      game.scene.fog.far = 820;
+      this.bonus = 0;
+      this.bonusTotal = world.bonuses.length;
+      this._applyTint(theme);
       game.camera.far = 900;
       game.camera.updateProjectionMatrix();
       this.x = 0;
@@ -278,13 +285,15 @@ export function createRoam(game) {
         { hex: 0xd4553a, shorts: 0x3a2a22, hat: 0xf2e2b8 },
       ];
       ISLANDS.forEach((isle) => {
+        const span = isle.index === 2 ? 24 : 10;
         const loop = [
-          [isle.cx - 10, isle.cz - 6],
-          [isle.cx + 10, isle.cz - 6],
-          [isle.cx + 10, isle.cz + 6],
-          [isle.cx - 10, isle.cz + 6],
+          [isle.cx - span, isle.cz - span * 0.35],
+          [isle.cx + span, isle.cz - span * 0.35],
+          [isle.cx + span, isle.cz + span * 0.45],
+          [isle.cx - span, isle.cz + span * 0.45],
         ];
-        for (let n = 0; n < 4; n++) {
+        const count = isle.index === 2 ? 10 : 4;
+        for (let n = 0; n < count; n++) {
           const kind = kinds[(isle.index + n) % kinds.length];
           const mesh = makePerson(kind);
           const path = loop.map(([x, z]) => new THREE.Vector3(x, 0, z));
@@ -303,7 +312,7 @@ export function createRoam(game) {
         if (this.holds.right) this.yaw -= TURN * dt;
       }
       const pace = this.boostT > 0 ? RUN * BOOST : RUN;
-      const move = this.stun > 0 ? 0 : this.holds.forward ? pace : 0;
+      const move = this.stun > 0 ? 0 : roamPace(this.holds, pace, BACK);
       const airborne = this.y > this.support + 0.12;
       const speed = airborne ? move * AIR : move;
       const fx = Math.sin(this.yaw);
@@ -348,6 +357,7 @@ export function createRoam(game) {
       const lean = (this.holds.left ? 7 : 0) + (this.holds.right ? -7 : 0);
       updateMochi(game.mochi, game.time, Math.abs(speed), grounded && !this.flipping, 0, lean, dt, false);
       this._touchFights();
+      this._touchBonuses();
       this._touchBoosts(grounded);
       if (this.invuln <= 0) this._touchHazards(dt, grounded);
       this._touchChecks();
@@ -359,6 +369,32 @@ export function createRoam(game) {
         game.bannerText = isle.name;
         game.bannerT = 2.2;
         game.audio.setTrack(Math.min(4, 2 + isle.index));
+        this._applyTint(isle);
+      }
+    },
+
+    _applyTint(isle) {
+      game.scene.fog.color.setHex(isle.fog);
+      game.scene.fog.near = 300;
+      game.scene.fog.far = 760;
+      if (game.hemi) game.hemi.color.setHex(isle.hemi);
+      if (game.sunLight) game.sunLight.color.setHex(isle.sun);
+    },
+
+    _touchBonuses() {
+      if (!world) return;
+      for (const coin of world.bonuses) {
+        if (coin.taken) continue;
+        const dx = this.x - coin.x;
+        const dz = this.z - coin.z;
+        if (dx * dx + dz * dz > 1.2 * 1.2) continue;
+        if (Math.abs(this.y - coin.y) > 1.35) continue;
+        coin.taken = true;
+        coin.mesh.visible = false;
+        this.fees += coin.value;
+        this.bonus += 1;
+        game._popup(new THREE.Vector3(coin.x, coin.y + 1.6, coin.z), `+${coin.value}`, 1000);
+        game.audio.coin(1000);
       }
     },
 
@@ -613,6 +649,11 @@ export function createRoam(game) {
 
     _updateWorld(dt) {
       if (!world) return;
+      for (const coin of world.bonuses) {
+        if (coin.taken) continue;
+        coin.mesh.rotation.y += dt * 2.6;
+        coin.mesh.position.y = coin.hover + Math.sin(game.time * 2.2 + coin.x) * 0.12;
+      }
       const leds = world.leds;
       if (leds) {
         const color = leds.instanceColor;
@@ -1238,11 +1279,11 @@ function writeHeadBolt(mesh, time) {
   const flick = 0.62 + Math.abs(Math.sin(time * 23)) * 0.7;
   for (let i = 0; i <= segs; i++) {
     const t = i / segs;
-    const jag = i === 0 || i === segs ? 0 : (i % 2 ? 0.28 : -0.24) * flick;
-    const y = 1.42 + t * 1.95;
-    const z = i % 2 ? 0.05 : -0.05;
-    pos.setXYZ(i * 2, jag, y + 0.09, z);
-    pos.setXYZ(i * 2 + 1, jag, y - 0.09, z);
+    const jag = i === 0 || i === segs ? 0 : (i % 2 ? 0.13 : -0.11) * flick;
+    const y = 1.62 + t * 0.95;
+    const z = i % 2 ? 0.03 : -0.03;
+    pos.setXYZ(i * 2, jag, y + 0.04, z);
+    pos.setXYZ(i * 2 + 1, jag, y - 0.04, z);
   }
   pos.needsUpdate = true;
 }

@@ -3,19 +3,45 @@ export const GOAL = 45;
 export const ISLAND_R = 68;
 
 export const ISLANDS = [
-  { index: 0, id: 'market', name: 'Contract Market', cx: 0, cz: 0, r: ISLAND_R, map: '#ff4db2', floor: 'pink', kind: 'market', accent: 0xff4db2 },
-  { index: 1, id: 'harbor', name: 'Oracle Port', cx: 196, cz: 0, r: ISLAND_R, map: '#2ad4c8', floor: 'grate', kind: 'harbor', accent: 0x2ad4c8 },
-  { index: 2, id: 'rally', name: 'Rally Square', cx: 392, cz: 0, r: ISLAND_R, map: '#ff9a2a', floor: 'pcb', kind: 'rally', accent: 0xff8a1a },
+  { index: 0, id: 'market', name: 'Contract Market', cx: 0, cz: 0, r: ISLAND_R, map: '#ff4db2', floor: 'pink', kind: 'market', accent: 0xff4db2, fog: 0x5a1848, hemi: 0xff7ad4, sun: 0xff8ac8 },
+  { index: 1, id: 'harbor', name: 'Oracle Port', cx: 196, cz: 0, r: ISLAND_R, map: '#2ad4c8', floor: 'grate', kind: 'harbor', accent: 0x2ad4c8, fog: 0x0a4a58, hemi: 0x7af6ff, sun: 0x9aefff },
+  { index: 2, id: 'rally', name: 'Rally Square', cx: 392, cz: 0, r: ISLAND_R, map: '#ff9a2a', floor: 'pcb', kind: 'rally', accent: 0xff8a1a, fog: 0x7a3410, hemi: 0xffb15a, sun: 0xffb15a },
+];
+
+export const BACK = 4.8;
+
+const FIGHTS = {
+  market: [
+    [-42, 22, 0, 'alley'], [-24, 36, 0.85, 'crate'], [-4, 40, 0.14, 'moat'], [22, 30, 1.75, 'rack'],
+    [42, 16, 0, 'corner'], [-48, 2, 0.12, 'bridge'], [-26, 4, 1.35, 'platform'], [6, 8, 0, 'alley'],
+    [28, 2, 0.85, 'crate'], [50, -6, 0.12, 'bridge'], [-36, -20, 0.14, 'moat'], [-10, -24, 1.75, 'rack'],
+    [16, -18, 0, 'alley'], [38, -30, 1.35, 'platform'], [-18, -44, 0, 'corner'],
+  ],
+  harbor: [
+    [-64, 22, 0.32, 'dock'], [-30, 38, 1.75, 'rack'], [-6, 46, 0.14, 'moat'], [20, 34, 0.85, 'crate'],
+    [46, 18, 1.35, 'platform'], [-48, -8, 0.32, 'dock'], [-18, 10, 0, 'corner'], [10, 14, 1.75, 'rack'],
+    [40, 2, 0.12, 'bridge'], [58, -16, 0.85, 'crate'], [-32, -26, 0, 'alley'], [-6, -30, 1.35, 'platform'],
+    [22, -24, 0.14, 'moat'], [70, -18, 0.32, 'dock'], [-20, -48, 1.75, 'rack'],
+  ],
+  rally: [
+    [-40, 30, 1.35, 'terrace'], [-14, 38, 0.9, 'stage'], [14, 34, 1.75, 'rack'], [40, 22, 0, 'corner'],
+    [-48, 8, 0.85, 'crate'], [-16, 10, 0.14, 'moat'], [12, 6, 0.9, 'stage'], [46, -2, 0.12, 'bridge'],
+    [28, -16, 1.35, 'terrace'], [-38, -18, 0, 'alley'], [-10, -22, 1.75, 'rack'], [16, -28, 0.85, 'crate'],
+    [40, -34, 0.14, 'moat'], [-22, -44, 1.35, 'platform'], [4, -42, 0, 'corner'],
+  ],
+};
+
+const BONUS = [
+  { island: 0, lx: -32, lz: 12, y: 1.65 },
+  { island: 0, lx: 20, lz: -36, y: 1.55 },
+  { island: 1, lx: -8, lz: 22, y: 1.7 },
+  { island: 1, lx: 48, lz: -30, y: 1.5 },
+  { island: 1, lx: -44, lz: 36, y: 1.6 },
+  { island: 2, lx: 2, lz: 20, y: 1.65 },
+  { island: 2, lx: -30, lz: -6, y: 1.45 },
 ];
 
 export const MAP = { originX: 196, originZ: 0, span: 290 };
-
-export const MOATS = [
-  [-40, 30], [-16, 38], [12, 36], [38, 24],
-  [-46, 10], [-20, 16], [22, 18], [44, 14],
-  [-38, -16], [-14, -20], [16, -14], [40, -22],
-  [-30, -40], [12, -44], [34, -36],
-];
 
 export function bridgeSolids() {
   const out = [];
@@ -40,11 +66,14 @@ export function bridgeSolids() {
 export function fightSpots() {
   const spots = [];
   for (const isle of ISLANDS) {
-    for (const [lx, lz] of MOATS) {
+    for (const [lx, lz, y, kind] of FIGHTS[isle.kind]) {
       spots.push({
         x: isle.cx + lx,
         z: isle.cz + lz,
-        y: 0.14,
+        lx,
+        lz,
+        y,
+        kind,
         island: isle.index,
       });
     }
@@ -53,7 +82,20 @@ export function fightSpots() {
 }
 
 export function clusterCenters() {
-  return fightSpots();
+  return fightSpots().filter((spot) => spot.kind === 'moat');
+}
+
+export function bonusSpots() {
+  return BONUS.map((spot) => {
+    const isle = ISLANDS[spot.island];
+    return { x: isle.cx + spot.lx, z: isle.cz + spot.lz, y: spot.y, value: 3, island: spot.island };
+  });
+}
+
+export function roamPace(holds, pace, backPace = BACK) {
+  if (holds.forward) return pace;
+  if (holds.back) return -backPace;
+  return 0;
 }
 
 export function overlapsSolid(x, z, solids, radius = 0.45) {

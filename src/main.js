@@ -82,14 +82,14 @@ const TALKS = {
     kicker: 'Validator Run',
     title: 'Stage 1',
     story: "Hi! I'm Mochi. This game has two stages.",
-    goal: 'Stage 1: collect 42,000 GEN for each validator so 5 validators join me. Stage 2: resolve AI agent conflicts across 3 islands.',
-    controls: 'Up or W jumps. Down or S ducks. Left and right change lanes. Grab every coin you can.',
+    goal: 'Stage 1: collect 42,000 tokens for each validator so 5 validators join me. Stage 2: resolve AI agent conflicts across 3 islands.',
+    controls: 'Up or W jumps. Down or S ducks. Left and right change lanes. Grab every token you can.',
   },
   roam: {
     kicker: 'Three islands',
     title: 'Stage 2',
     story: 'The validators are with me. Now I help the AI agents resolve their arguments.',
-    goal: 'Walk up to an arguing pair. Each conflict you settle pays 1 token. You have 5 minutes. Gold coins are worth 3. A stopwatch on Oracle Port adds 30 seconds, and one on Rally Square adds a minute.',
+    goal: 'Walk up to an arguing pair. Each conflict you settle pays 1 token. You have 5 minutes. Gold tokens are worth 3. A stopwatch on Oracle Port adds 30 seconds, and one on Rally Square adds a minute.',
     controls: 'Up or W runs forward. Down or S walks back. Left and right turn. Space jumps. Bridges link the three islands.',
   },
 };
@@ -427,7 +427,7 @@ function paint(snap) {
   flash.style.opacity = String(Math.min(0.62, snap.flash));
   flash.style.background = snap.flashColor;
   scoreEl.textContent = Math.floor(snap.score).toLocaleString('en-US');
-  genEl.textContent = `${Math.round(snap.gen).toLocaleString('en-US')} / ${STAKE.toLocaleString('en-US')} GEN`;
+  genEl.textContent = `${Math.round(snap.gen).toLocaleString('en-US')} / ${STAKE.toLocaleString('en-US')} tokens`;
   whichEl.textContent = snap.done >= VALIDATORS
     ? 'Five validators staked'
     : `Validator ${snap.done + 1} of ${VALIDATORS}`;

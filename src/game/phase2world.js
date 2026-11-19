@@ -1043,7 +1043,7 @@ function dressMarket(group, solids, tex, isle, nerds) {
       stall += 1;
     }
   }
-  for (const [lx, lz, label] of [[-30, 28, 'DEAL'], [24, 22, 'GEN'], [-8, -32, 'STAKE']]) {
+  for (const [lx, lz, label] of [[-30, 28, 'DEAL'], [24, 22, 'TOKENS'], [-8, -32, 'STAKE']]) {
     const x = isle.cx + lx;
     const z = isle.cz + lz;
     if (occupied(x, z)) continue;

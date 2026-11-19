@@ -1,68 +1,68 @@
 # Mochi — Adjudicator of the Internet
 
-Protótipo jogável em **duas etapas**. Na **Stage 1** (Validator Run), a Mochi, mascote da GenLayer, corre por um mundo de computadores, cabos e satélites para reunir **5 validadores**. Cada validador exige um stake de **42.000 GEN**.
+A playable prototype with **two stages**. In **Stage 1** (Validator Run), Mochi runs through a world of computers, cables, and satellites to recruit **5 validators**. Each validator requires a stake of **42,000** tokens.
 
-Quando os cinco estão completos, a Mochi vira a Adjudicator of the Internet e a **Stage 2** abre um percurso só: Contract Market, Oracle Port e Rally Square, ligados por pontes, com a câmera atrás e acima. Cada ilha tem cor e piso próprios. Robôs prateados discutem sob um raio vermelho vertical. O botão **Stage 2** na abertura entra direto em Contract Market.
+Once all five validators are recruited, Mochi becomes the Adjudicator of the Internet, and **Stage 2** opens up a single course: Contract Market, Oracle Port, and Rally Square, connected by bridges, with the camera positioned behind and above her. Each island has its own colors and flooring. Silver robots argue beneath a vertical red beam. The **Stage 2** button on the title screen takes you straight to Contract Market.
 
-Geometria 3D procedural em Three.js. Código original, sem assets pagos.
+Procedural 3D geometry built with Three.js. Original code, with no paid assets.
 
-## Como rodar
+## How to run
 
-Requisitos: Node.js 18 ou mais novo.
+Requirements: Node.js 18 or newer.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Abra o endereço que o Vite mostrar. O servidor local usa a porta **47321** e a base `/mochi-game/`, por exemplo `http://127.0.0.1:47321/mochi-game/`. A versão publicada fica em `https://cgmello.github.io/mochi-game/`.
+Open the URL shown by Vite. The local server uses port **47321** and the base path `/mochi-game/`, for example `http://127.0.0.1:47321/mochi-game/`. The published version is available at [https://cgmello.github.io/mochi-game/](https://cgmello.github.io/mochi-game/).
 
-Build de produção:
+Production build:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-Testes da colisão (sem abrir o navegador):
+Collision tests (no browser required):
 
 ```bash
 npm test
 ```
 
-## Controles da Stage 1
+## Stage 1 controls
 
-| Tecla | Ação |
+| Key | Action |
 | --- | --- |
-| Seta para cima | Pular |
-| Seta para baixo | Agachar / deslizar |
-| Seta esquerda / direita | Trocar de faixa |
-| Toque | Deslize na direção do movimento. Em telas de toque também há botões. |
+| Up arrow | Jump |
+| Down arrow | Crouch / slide |
+| Left / right arrow | Switch lanes |
+| Touch | Swipe in the direction you want to move. Touchscreens also have on-screen buttons. |
 
-W, A, S, D e espaço repetem pulo e troca de faixa.
+W, A, S, D, and Space provide alternative controls for jumping, crouching, and switching lanes.
 
-## Controles da Stage 2
+## Stage 2 controls
 
-| Tecla | Ação |
+| Key | Action |
 | --- | --- |
-| Seta para cima | Correr para a frente |
-| Seta para baixo | Não faz nada |
-| Seta esquerda / direita | Virar |
-| Espaço | Pular, inclusive de servidor em servidor |
+| Up arrow | Run forward |
+| Down arrow | Walk backward slowly |
+| Left / right arrow | Turn |
+| Space | Jump, including from one server to another |
 
-W, A e D repetem correr e virar. Seta para baixo e S andam para trás devagar. O minimapa mostra só a ilha em que a Mochi está, ampliada até preencher o círculo, com as saídas das pontes na borda. No meio de uma ponte, o mapa troca para a ilha mais próxima e mostra a ponte. Cada briga resolvida vale **1 token**. Moedas douradas grandes, em lugares altos, valem **3 tokens** e aparecem no minimapa. Um cronômetro alto em Oracle Port soma **30 segundos** (`+30s`); outro em Rally Square soma **1 minuto** (`+1:00`). Os dois giram no eixo vertical, como as moedas. No começo de cada etapa, um painel grande no centro mostra o texto inteiro de uma vez, com o retrato da Mochi. O jogo fica parado até você apertar Enter ou Espaço. No fim da Stage 2, Enter recomeça e Esc volta ao menu. São **45 brigas** numa corrida só, uma dupla por fosso, cerca de 15 em cada ilha, com **5 minutos** no relógio: **Contract Market** (piso rosa), **Oracle Port** (grade verde-água) e **Rally Square** (laranja e ouro). Pontes livres ligam as ilhas. Aranhas-robô patrulham o piso. Faixas com setas dão cerca de 3 segundos de impulso.
+W, A, and D provide alternative controls for running and turning. The down arrow and S let you walk backward slowly. The minimap shows only Mochi's current island, zoomed in to fill the circle, with bridge exits at the edge. While crossing a bridge, the map switches to the nearest island and shows the bridge. Each resolved dispute earns **1 token**. Large golden tokens in elevated locations are worth **3 tokens** and appear on the minimap. A stopwatch high up in Oracle Port adds **30 seconds** (`+30s`); another in Rally Square adds **1 minute** (`+1:00`). Both rotate around their vertical axis, just like the tokens. At the start of each stage, a large panel in the center displays the full text at once, alongside Mochi's portrait. The game stays paused until you press Enter or Space. At the end of Stage 2, Enter restarts the run and Esc returns to the menu. There are **45 disputes** in a single run, with one pair of robots per pit and around 15 on each island, and **5 minutes** on the clock: **Contract Market** (pink flooring), **Oracle Port** (a teal grid), and **Rally Square** (orange and gold). Open bridges connect the islands. Robot spiders patrol the ground. Strips marked with arrows provide a speed boost for about 3 seconds.
 
-Se o tempo acaba, a tela **THE END** aparece, os tokens da corrida se perdem e o percurso recomeça. Vencer é juntar os 45. Buracos em volta dos agentes têm borda de alerta e um vão ou uma ponte. Cair custa 1 token e a Mochi volta ao último **checkpoint**. Uma fileira de servidores, pulada em sequência até o último, faz a Mochi dar cambalhotas no ar.
+If time runs out, the **THE END** screen appears, the tokens collected during the run are lost, and the course restarts. To win, collect all 45 tokens. Pits around the agents have warning borders and either a gap to jump across or a bridge. Falling costs 1 token and returns Mochi to the last **checkpoint**. Jumping along a row of servers all the way to the last one makes Mochi perform flips in midair.
 
-## Regras
+## Rules
 
-- As moedas GEN valem **500**, **1.000**, **5.000** ou **10.000**. A de 10.000 fica acima dos trens de servidores: suba a rampa (ou pule na frente, se não houver rampa) e pule de novo em cima para pegá-la. Bater de frente no trem, sem pular e sem rampa, tira uma vida.
-- Faixas de esteira com setas cobrem 1, 2 ou 3 pistas (quase sempre 1 ou 2). Passar por cima acelera a Mochi por cerca de 3 segundos; dá para desviar. A velocidade base também sobe aos poucos ao longo da corrida.
-- A música muda a cada validador concluído: cinco levadas, cada uma mais rápida e com mais camadas. O botão Sound corta efeitos e música.
-- Perder as 3 vidas quebra o stake atual: uma aura vermelha pulsa em volta da Mochi, as fichas GEN estouram e caem, e o círculo do validador esvazia. A câmera e a Mochi ficam firmes, sem tremor nem piscada.
-- O círculo do validador atual enche até 42.000 GEN. Ao completar, um robô validador aparece e cumprimenta a Mochi. O próximo validador começa do zero (o que passar de 42.000 entra no seguinte).
-- São **3 vidas**. Bater num obstáculo tira 1 vida e dá um instante de invulnerabilidade.
-- Ao perder as 3 vidas, o GEN do validador **atual** volta a zero. Validadores já conquistados permanecem, e as vidas enchem de novo.
-- Com os 5 validadores, a Stage 1 termina e a Stage 2 pode começar. A música continua nas duas etapas e fica mais cheia conforme as brigas da ilha são resolvidas. O botão Sound corta efeitos e música.
+- Tokens are worth **500**, **1,000**, **5,000**, or **10,000**. The 10,000-token pickup sits above the server trains: go up the ramp (or jump onto the front if there is no ramp), then jump again from the top to collect it. Hitting a train head-on without jumping or using a ramp costs one life.
+- Conveyor strips marked with arrows cover 1, 2, or 3 lanes (usually 1 or 2). Running over them speeds Mochi up for about 3 seconds; you can dodge them. The base speed also increases gradually throughout the run.
+- The music changes each time a validator is completed: five grooves, each faster and more layered than the last. The Sound button mutes both sound effects and music.
+- Losing all 3 lives breaks the current stake: a red aura pulses around Mochi, tokens burst outward and fall, and the validator's progress circle empties. The camera and Mochi remain steady, without shaking or flashing.
+- The current validator's progress circle fills up to 42,000 tokens. Once it is full, a validator robot appears and greets Mochi. The next validator starts from zero, with any tokens beyond 42,000 carried over.
+- You have **3 lives**. Hitting an obstacle costs 1 life and grants a brief period of invulnerability.
+- Losing all 3 lives resets the **current** validator's token balance to zero. Previously recruited validators remain, and your lives are fully restored.
+- Once all 5 validators are recruited, Stage 1 ends and Stage 2 can begin. The music continues across both stages and becomes fuller as disputes on the islands are resolved. The Sound button mutes both sound effects and music.
 
-A tela de abertura usa `public/mockup.jpg`.
+The title screen uses `public/mockup.jpg`.
